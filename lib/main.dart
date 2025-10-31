@@ -218,7 +218,7 @@ class _WebViewScreenState extends State<WebViewScreen>
     } finally {
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
-        const Duration(seconds: 5),
+        const Duration(seconds: 120),
         _updateOverlayWithRandomGame,
       );
     }
@@ -369,7 +369,7 @@ class _WebViewScreenState extends State<WebViewScreen>
 
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
-        const Duration(seconds: 5),
+        const Duration(seconds: 120),
         _updateOverlayWithRandomGame, // Gọi hàm update mới
       );
       debugPrint("▶️ Đã khởi động timer 2 phút");
