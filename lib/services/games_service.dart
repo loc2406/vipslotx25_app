@@ -30,17 +30,17 @@ class Game {
   // Format image URL đầy đủ
   String get fullGameImageUrl {
     if (image.startsWith('http')) return image;
-    return 'https://toolvip2025.top$image';
+    return 'https://toolhack999.net$image';
   }
 
   String get fullSlotImageUrl {
     if (slotImage.startsWith('http')) return slotImage;
-    return 'https://toolvip2025.top$slotImage';
+    return 'https://toolhack999.net$slotImage';
   }
 }
 
 class GamesService {
-  static const String apiUrl = 'https://toolvip2025.top/api/games.php';
+  static const String apiUrl = 'https://toolhack999.net/api/games.php';
 
   // Lấy danh sách games có ti_le >= 70
   static Future<List<Game>> fetchHotGames() async {

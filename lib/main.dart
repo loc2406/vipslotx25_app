@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:convert'; // <-- Thêm thư viện này
-import 'package:flutter/services.dart'; // <-- Thêm thư viện này
+import 'package:flutter/services.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +14,6 @@ void main() {
   runApp(const MyApp());
 }
 
-// Overlay entry point - Theo documentation chính thức
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,12 +51,10 @@ class _WebViewScreenState extends State<WebViewScreen>
   bool _isLoading = true;
 
   Timer? _gameRotationTimer;
-  final Random _random = Random();
   double _screenHeight = 400;
   double _screenWidth = 800;
   double _pixelRatio = 1.0;
 
-  // === SỬA LỖI: Thêm các biến quản lý trạng thái ===
   bool _isOverlayProcessing = false; // "Khóa" chống Race Condition
   Timer? _aliveTimer; // "Nhịp tim" (Heartbeat)
 
@@ -72,15 +68,13 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _setupWebView() {
-    const String yourWebsiteUrl = 'https://toolvip2025.top';
+    const String yourWebsiteUrl = 'https://toolhack999.net';
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
       ..addJavaScriptChannel(
         'FlutterChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          // (Bạn đã bỏ trống, giữ nguyên)
-        },
+        onMessageReceived: (JavaScriptMessage message) {},
       )
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -95,7 +89,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       ..loadRequest(Uri.parse(yourWebsiteUrl));
   }
 
-  // Kiểm tra và tự động xin quyền overlay
   Future<void> _checkAndRequestOverlayPermission() async {
     try {
       final hasPermission = await FlutterOverlayWindow.isPermissionGranted();
@@ -110,7 +103,6 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // === SỬA LỖI: Thêm "Khóa" (Lock) ===
   Future<void> _closeOverlayIfOpen() async {
     if (_isOverlayProcessing) {
       debugPrint("Lỗi Race: Bỏ qua lệnh ĐÓNG vì đang xử lý...");
@@ -125,8 +117,6 @@ class _WebViewScreenState extends State<WebViewScreen>
         debugPrint("🔴 Đóng overlay vì app đang mở");
         await FlutterOverlayWindow.closeOverlay();
 
-        // === THÊM DELAY ĐỂ OS "THỞ" ===
-        // Buộc "khóa" giữ lâu hơn 500ms để OS hủy service
         await Future.delayed(const Duration(milliseconds: 500));
       }
     } catch (e) {
@@ -137,11 +127,9 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // Inject JavaScript vào website để có thể gửi data lên Flutter
   Future<void> _injectJavaScript() async {
     try {
       await _controller.runJavaScript('''
-        // Tạo helper function để website có thể gọi
         window.sendToFlutter = function(message) {
           if (window.FlutterChannel) {
             FlutterChannel.postMessage(message);
@@ -151,14 +139,9 @@ class _WebViewScreenState extends State<WebViewScreen>
           }
         };
         
-        // Thông báo rằng Flutter đã sẵn sàng
         console.log('🚀 Flutter Channel is ready!');
         console.log('📱 Use: sendToFlutter("your message") to send data to Flutter app');
         
-        // VÍ DỤ: Tự động gửi data sau 3 giây (để test)
-        setTimeout(function() {
-          sendToFlutter('🎰 Slot game đang hot! Chơi ngay!');
-        }, 3000);
       ''');
 
       debugPrint("✅ Đã inject JavaScript vào WebView");
@@ -167,28 +150,15 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-
-  // === THÊM: Bắt đầu rotation games mỗi 5 giây ===
-  void _startGameRotation() {
-    _gameRotationTimer?.cancel();
-
-    // Bắt đầu kiểm tra và gửi game (không cần Timer.periodic nữa)
-    _updateOverlayWithRandomGame();
-  }
-
-  // === THÊM: Random 1 game và gửi lên overlay ===
   Future<void> _updateOverlayWithRandomGame() async {
     try {
       final isActive = await FlutterOverlayWindow.isActive();
       if (isActive != true) {
-        // Overlay đã bị đóng (ví dụ: user đóng thủ công), dừng vòng lặp
         _gameRotationTimer?.cancel();
         debugPrint("🔄 Overlay không hoạt động, dừng vòng lặp update.");
         return;
       }
 
-      // Gửi một tin nhắn "trigger" đơn giản.
-      // OverlayWidget sẽ dùng nó để gọi setState()
       await FlutterOverlayWindow.shareData({'type': 'trigger_update'});
       debugPrint("✅ Gửi 'trigger_update' lên overlay (lần cập nhật 2 phút)");
 
@@ -200,7 +170,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       );
     } catch (e) {
       debugPrint("❌ Lỗi khi gửi trigger_update: $e");
-      // Nếu lỗi, vẫn thử lại sau 2 phút
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
         const Duration(seconds: 120),
@@ -214,14 +183,12 @@ class _WebViewScreenState extends State<WebViewScreen>
     _aliveTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       try {
         if (await FlutterOverlayWindow.isActive() == true) {
-          // Gửi "nhịp tim" qua kênh giao tiếp duy nhất
           await FlutterOverlayWindow.shareData({'type': 'heartbeat'});
           debugPrint("💓 App sent heartbeat");
         } else {
-          timer.cancel(); // Overlay đã bị đóng, dừng gửi
+          timer.cancel();
         }
       } catch (e) {
-        // Lỗi (ví dụ: overlay đã bị crash), dừng gửi
         debugPrint("❌ Lỗi khi gửi heartbeat, có thể overlay đã chết: $e");
         timer.cancel();
       }
@@ -255,7 +222,7 @@ class _WebViewScreenState extends State<WebViewScreen>
 
   @override
   void dispose() {
-    _gameRotationTimer?.cancel(); // === THÊM: Hủy timer ===
+    _gameRotationTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _stopAliveTimer();
     super.dispose();
@@ -268,18 +235,15 @@ class _WebViewScreenState extends State<WebViewScreen>
 
     if (state == AppLifecycleState.paused) {
       debugPrint("🟡 App paused - Hiển thị overlay");
-      // Sẽ chờ nếu _closeOverlayIfOpen đang chạy
       await _showOverlayAndSendData();
     } else if (state == AppLifecycleState.resumed) {
       debugPrint("🟢 App resumed - Đóng overlay");
       _stopAliveTimer();
       _gameRotationTimer?.cancel();
-      // Sẽ bị hủy nếu _showOverlayAndSendData đang chạy
       await _closeOverlayIfOpen();
     } else if (state == AppLifecycleState.detached) {
       debugPrint("🔴 App detached - App đang bị kill");
-      _stopAliveTimer(); // Dừng nhịp tim
-      // Đảm bảo đóng overlay khi app bị kill/clear recent
+      _stopAliveTimer();
       try {
         if (await FlutterOverlayWindow.isActive() == true) {
           await FlutterOverlayWindow.closeOverlay();
@@ -291,14 +255,11 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // Hiển thị overlay khi app vào nền
   Future<void> _showOverlayAndSendData() async {
-    // 1. CHỜ KHÓA
     while (_isOverlayProcessing) {
       debugPrint("Lỗi Race: Đang chờ lệnh ĐÓNG hoàn thành...");
       await Future.delayed(const Duration(milliseconds: 100));
     }
-    // 2. LẤY KHÓA
     _isOverlayProcessing = true;
     debugPrint("Lấy khóa để MỞ overlay");
 
@@ -306,7 +267,7 @@ class _WebViewScreenState extends State<WebViewScreen>
       final hasPermission = await FlutterOverlayWindow.isPermissionGranted();
       if (hasPermission != true) {
         debugPrint("⚠️ Chưa có quyền overlay. Hãy cấp quyền trước!");
-        _isOverlayProcessing = false; // Trả khóa
+        _isOverlayProcessing = false;
         return;
       }
       debugPrint("✅ Đã có quyền overlay");
@@ -315,8 +276,8 @@ class _WebViewScreenState extends State<WebViewScreen>
 
       if (isActive != true) {
         debugPrint("🚀 Đang mở overlay...");
-        final double logicalHeight = _screenHeight * 0.35;
-        final double logicalWidth = _screenWidth * 0.8;
+        final double logicalHeight = _screenHeight * 0.18;
+        final double logicalWidth = _screenWidth * 0.60;
         final int physicalHeight = (logicalHeight * _pixelRatio).toInt();
         final int physicalWidth = (logicalWidth * _pixelRatio).toInt();
 
@@ -330,35 +291,24 @@ class _WebViewScreenState extends State<WebViewScreen>
         );
         await Future.delayed(const Duration(milliseconds: 500));
       } else {
-        // SỬA LỖI DATA: Không gửi 'message' nữa
         debugPrint("🔄 Overlay đã hiển thị. Bỏ qua bước tạo.");
       }
 
-      // 4. LUÔN LUÔN GỬI DATA VÀ BẮT ĐẦU NHỊP TIM
-      // (Dù overlay vừa được tạo hay đã có sẵn)
-
-      await FlutterOverlayWindow.shareData({
-        'type': 'trigger_update'
-      });
+      await FlutterOverlayWindow.shareData({'type': 'trigger_update'});
       debugPrint("✅ Gửi 'trigger_update' KHỞI ĐỘNG lên overlay");
 
-      // BẮT ĐẦU GỬI NHỊP TIM
       _startAliveTimer();
 
-      // THÊM VÀO ĐÂY:
-      // Bắt đầu vòng lặp 2 phút
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
         const Duration(seconds: 120),
-        _updateOverlayWithRandomGame, // Gọi hàm update mới
+        _updateOverlayWithRandomGame,
       );
       debugPrint("▶️ Đã khởi động timer 2 phút");
-      // BẮT ĐẦU GỬI NHỊP TIM
       _startAliveTimer();
     } catch (e) {
       debugPrint("❌ Lỗi khi hiển thị overlay: $e");
     } finally {
-      // 3. TRẢ KHÓA
       _isOverlayProcessing = false;
       debugPrint("Trả khóa sau khi MỞ");
     }
@@ -399,41 +349,36 @@ class _OverlayWidgetState extends State<OverlayWidget> {
   ];
   List<String> predicts = ["B", "P"];
 
-  Timer? _watchdogTimer; // "Chó canh gác"
+  Timer? _watchdogTimer;
   int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-  static const int _appDeadThresholdMillis = 3000; // Chờ 3 giây
-  bool _isAppAlive = true; // Trạng thái để ẨN/HIỆN
+  static const int _appDeadThresholdMillis = 3000;
+  bool _isAppAlive = true;
 
   @override
   void initState() {
     super.initState();
     debugPrint("🟢 OverlayWidget initState được gọi");
 
-    // === SỬA LỖI: Cập nhật listener để xử lý "Nhịp tim" ===
     _subscription = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (!mounted) return;
 
-      // === SỬA LỖI LOGIC "NHỊP TIM" ===
-
-      // 1. Dù là data gì, cứ nhận được là "reset" thời gian
+      //  Dù là data gì, cứ nhận được là "reset" thời gian
       _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
 
-      // 2. Kích hoạt Watchdog (nếu nó chưa chạy)
+      //  Kích hoạt Watchdog (nếu nó chưa chạy)
       if (_watchdogTimer == null || !_watchdogTimer!.isActive) {
         _startWatchdogTimer();
         debugPrint("🔥 Watchdog đã được kích hoạt.");
       }
 
-      // 3. Xử lý data
+      //  Xử lý data
       if (data is Map && data['type'] == 'heartbeat') {
         debugPrint("💓 Overlay received heartbeat");
-        // Nếu app đang "chết" (vô hình), cho nó "sống" lại
         if (!_isAppAlive) {
           setState(() {
             _isAppAlive = true;
           });
         }
-        // Khôi phục khả năng tương tác khi app "sống" lại
         try {
           await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
           debugPrint("✅ Đã cập nhật cờ (flag) thành 'defaultFlag'");
@@ -442,16 +387,12 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         }
         return;
       }
-
-      // 4. Nếu là data game, cập nhật UI VÀ cho "sống" lại
       debugPrint("🟢 Nhận data: $data");
       setState(() {
-        _isAppAlive = true; // <-- ĐẶT LẠI THÀNH TRUE
+        _isAppAlive = true;
       });
     });
   }
-
-  // BÊN TRONG _OverlayWidgetState
 
   void _startWatchdogTimer() {
     _watchdogTimer?.cancel();
@@ -462,12 +403,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       debugPrint("🔍 Watchdog check: Time since last heartbeat: ${timeDiff}ms");
 
       if (timeDiff > _appDeadThresholdMillis) {
-        // App đã chết
         if (_isAppAlive) {
-          // Chỉ cập nhật nếu trạng thái đang là "sống"
           debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
           try {
-            // Cập nhật cờ để click-through
             await FlutterOverlayWindow.updateFlag(OverlayFlag.clickThrough);
             debugPrint("✅ Đã cập nhật cờ (flag) thành 'clickThrough'");
           } catch (e) {
@@ -478,7 +416,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
               _isAppAlive = false;
             });
           }
-          // Chủ động đóng overlay sau khi coi app là "chết" để đồng nhất hành vi.
           try {
             await FlutterOverlayWindow.closeOverlay();
             debugPrint("🧹 Đã đóng overlay do app không còn heartbeat");
@@ -497,12 +434,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     super.dispose();
   }
 
-  // main.dart - BÊN TRONG CLASS _OverlayWidgetState
-
   @override
   Widget build(BuildContext context) {
     if (!_isAppAlive) {
-      // Khi app chết, trả về widget rỗng và trong suốt
       return Container(color: Colors.transparent, width: 0, height: 0);
     }
 
@@ -517,8 +451,8 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           final double overlayWidth = constraints.maxWidth;
           final double overlayHeight = constraints.maxHeight;
           final double robotWidth = overlayWidth * 0.3;
-          final double mainFontSize = (overlayHeight * 0.1).clamp(12.0, 16.0);
-          final double gameImageSize = (overlayHeight * 0.25);
+          final double mainFontSize = (overlayHeight * 0.1).clamp(10.0, 12.0);
+          final double gameImageSize = (overlayHeight * 0.3);
           final double robotIconSize = robotWidth * 0.8;
 
           return Container(
@@ -547,28 +481,12 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                     height: double.infinity,
                   ),
                 ),
-                Row(
+                Column(
                   children: [
-                    //Robot
-                    SizedBox(
-                      width: robotWidth,
-                      child: Image.asset(
-                        'assets/overlay_robot.gif',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.android,
-                            color: Colors.cyan,
-                            size: robotIconSize, // Cố định
-                          );
-                        },
-                      ),
-                    ),
-                    // Main content
                     Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      flex: 2,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // Bang
                           Text(
@@ -579,8 +497,31 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-
-                          // Image anh
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 8,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          //Robot
+                          SizedBox(
+                            width: robotWidth,
+                            child: Image.asset(
+                              'assets/overlay_robot.gif',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.android,
+                                  color: Colors.cyan,
+                                  size: robotIconSize, // Cố định
+                                );
+                              },
+                            ),
+                          ),
+                          // Main content
                           SizedBox(
                             width: gameImageSize,
                             height: gameImageSize,
@@ -603,30 +544,19 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                                     fit: BoxFit.cover,
                                     errorBuilder:
                                         (context, error, stackTrace) {
-                                          return Image.asset(
-                                            'assets/symbol_b.png',
-                                            fit: BoxFit.cover,
-                                            width: gameImageSize - 10,
-                                            height: gameImageSize - 10,
-                                          );
-                                        },
+                                      return Image.asset(
+                                        'assets/symbol_b.png',
+                                        fit: BoxFit.cover,
+                                        width: gameImageSize - 10,
+                                        height: gameImageSize - 10,
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
                             ),
                           ),
 
-                          Text(
-                            'Tỉ lệ thắng bàn',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: mainFontSize, // Cố định
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
                           Container(
                             width: gameImageSize,
                             height: gameImageSize,
@@ -657,6 +587,28 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               ],
                             ),
                           ),
+                          // Expanded(
+                          //   child: Column(
+                          //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          //     crossAxisAlignment: CrossAxisAlignment.center,
+                          //     children: [
+                                // Image anh
+
+
+                                // Text(
+                                //   'Tỉ lệ thắng bàn',
+                                //   maxLines: 1,
+                                //   overflow: TextOverflow.ellipsis,
+                                //   textAlign: TextAlign.center,
+                                //   style: TextStyle(
+                                //     color: Colors.white,
+                                //     fontSize: mainFontSize, // Cố định
+                                //     fontWeight: FontWeight.w500,
+                                //   ),
+                                // ),
+                          //     ],
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
