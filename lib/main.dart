@@ -204,10 +204,15 @@ class _WebViewScreenState extends State<WebViewScreen>
     // 1. Kiểm tra các điều kiện dừng
     if (_hotGames.isEmpty) return; // Không có game
     if (retryCount >= _maxRetries) {
-      debugPrint("❌ Đã re-roll $_maxRetries lần, tất cả game đều không hợp lệ. Tạm dừng 2 phút.");
+      debugPrint(
+        "❌ Đã re-roll $_maxRetries lần, tất cả game đều không hợp lệ. Tạm dừng 2 phút.",
+      );
       // Dừng lại và thử lại sau 2 phút
       _gameRotationTimer?.cancel();
-      _gameRotationTimer = Timer(const Duration(seconds: 120), _updateOverlayWithRandomGame);
+      _gameRotationTimer = Timer(
+        const Duration(seconds: 120),
+        _updateOverlayWithRandomGame,
+      );
       return;
     }
 
@@ -224,12 +229,16 @@ class _WebViewScreenState extends State<WebViewScreen>
       // 3. KIỂM TRA TÍNH HỢP LỆ CỦA DATA
       //    (Giả định: "hợp lệ" là khi có cả 2 ảnh)
       final bool isDataValid =
-          (randomGame.fullGameImageUrl != null && randomGame.fullGameImageUrl!.isNotEmpty) &&
-              (randomGame.fullSlotImageUrl != null && randomGame.fullSlotImageUrl!.isNotEmpty);
+          (randomGame.fullGameImageUrl != null &&
+              randomGame.fullGameImageUrl!.isNotEmpty) &&
+              (randomGame.fullSlotImageUrl != null &&
+                  randomGame.fullSlotImageUrl!.isNotEmpty);
 
       if (isDataValid) {
         // 4. HỢP LỆ: Gửi data và hẹn giờ 2 PHÚT
-        debugPrint("✅ Dữ liệu hợp lệ (thử lần ${retryCount + 1}). Gửi game: ${randomGame.name}");
+        debugPrint(
+          "✅ Dữ liệu hợp lệ (thử lần ${retryCount + 1}). Gửi game: ${randomGame.name}",
+        );
         await FlutterOverlayWindow.shareData({
           'name': randomGame.name,
           'image': randomGame.fullGameImageUrl,
@@ -239,11 +248,15 @@ class _WebViewScreenState extends State<WebViewScreen>
 
         // Hẹn giờ lần chạy KẾ TIẾP (sau 2 phút)
         _gameRotationTimer?.cancel();
-        _gameRotationTimer = Timer(const Duration(seconds: 120), _updateOverlayWithRandomGame);
-
+        _gameRotationTimer = Timer(
+          const Duration(seconds: 120),
+          _updateOverlayWithRandomGame,
+        );
       } else {
         // 5. KHÔNG HỢP LỆ: Re-roll NGAY LẬP TỨC
-        debugPrint("⚠️ Dữ liệu KHÔNG hợp lệ (thử lần ${retryCount + 1}) cho game: ${randomGame.name}. Đang re-roll...");
+        debugPrint(
+          "⚠️ Dữ liệu KHÔNG hợp lệ (thử lần ${retryCount + 1}) cho game: ${randomGame.name}. Đang re-roll...",
+        );
 
         // Chờ 50ms để tránh vòng lặp vô hạn quá nhanh
         await Future.delayed(const Duration(milliseconds: 50));
@@ -252,7 +265,10 @@ class _WebViewScreenState extends State<WebViewScreen>
       }
     } catch (e) {
       _gameRotationTimer?.cancel();
-      _gameRotationTimer = Timer(const Duration(seconds: 120), _updateOverlayWithRandomGame);
+      _gameRotationTimer = Timer(
+        const Duration(seconds: 120),
+        _updateOverlayWithRandomGame,
+      );
     }
   }
 
@@ -317,16 +333,23 @@ class _WebViewScreenState extends State<WebViewScreen>
       debugPrint("🟡 App paused - Hiển thị overlay");
       // Sẽ chờ nếu _closeOverlayIfOpen đang chạy
       await _showOverlayAndSendData();
-    }
-    else if (state == AppLifecycleState.resumed) {
+    } else if (state == AppLifecycleState.resumed) {
       debugPrint("🟢 App resumed - Đóng overlay");
       _stopAliveTimer(); // Dừng nhịp tim
       // Sẽ bị hủy nếu _showOverlayAndSendData đang chạy
       await _closeOverlayIfOpen();
-    }
-    else if (state == AppLifecycleState.detached) {
+    } else if (state == AppLifecycleState.detached) {
       debugPrint("🔴 App detached - App đang bị kill");
       _stopAliveTimer(); // Dừng nhịp tim
+      // Đảm bảo đóng overlay khi app bị kill/clear recent
+      try {
+        if (await FlutterOverlayWindow.isActive() == true) {
+          await FlutterOverlayWindow.closeOverlay();
+          debugPrint("🧹 Đã đóng overlay khi app detached");
+        }
+      } catch (e) {
+        debugPrint("❌ Lỗi khi đóng overlay lúc detached: $e");
+      }
     }
   }
 
@@ -365,7 +388,7 @@ class _WebViewScreenState extends State<WebViewScreen>
           alignment: OverlayAlignment.center,
           enableDrag: true,
           positionGravity: PositionGravity.auto,
-          flag: OverlayFlag.clickThrough
+          flag: OverlayFlag.defaultFlag,
         );
         await Future.delayed(const Duration(milliseconds: 500));
       } else {
@@ -384,17 +407,17 @@ class _WebViewScreenState extends State<WebViewScreen>
           'slot_image': randomGame.fullSlotImageUrl,
           'ti_le': randomGame.tiLe.toString(),
         });
-        debugPrint(
-          "✅ Gửi data game lên overlay: ${randomGame.name}",
-        );
+        debugPrint("✅ Gửi data game lên overlay: ${randomGame.name}");
       } else {
         await FlutterOverlayWindow.shareData({
-          'name': 'VipSlotX25', 'image': '', 'slot_image': '', 'ti_le': '100',
+          'name': 'VipSlotX25',
+          'image': '',
+          'slot_image': '',
+          'ti_le': '100',
         });
       }
       // BẮT ĐẦU GỬI NHỊP TIM
       _startAliveTimer();
-
     } catch (e) {
       debugPrint("❌ Lỗi khi hiển thị overlay: $e");
     } finally {
@@ -444,7 +467,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     debugPrint("🟢 OverlayWidget initState được gọi");
 
     // === SỬA LỖI: Cập nhật listener để xử lý "Nhịp tim" ===
-    _subscription = FlutterOverlayWindow.overlayListener.listen((data) {
+    _subscription = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (!mounted) return;
 
       // === SỬA LỖI LOGIC "NHỊP TIM" ===
@@ -466,6 +489,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           setState(() {
             _isAppAlive = true;
           });
+        }
+        // Khôi phục khả năng tương tác khi app "sống" lại
+        try {
+          await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+          debugPrint("✅ Đã cập nhật cờ (flag) thành 'defaultFlag'");
+        } catch (e) {
+          debugPrint("❌ Lỗi khi cập nhật cờ (flag) về 'defaultFlag': $e");
         }
         return;
       }
@@ -494,7 +524,8 @@ class _OverlayWidgetState extends State<OverlayWidget> {
 
       if (timeDiff > _appDeadThresholdMillis) {
         // App đã chết
-        if (_isAppAlive) { // Chỉ cập nhật nếu trạng thái đang là "sống"
+        if (_isAppAlive) {
+          // Chỉ cập nhật nếu trạng thái đang là "sống"
           debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
           try {
             // Cập nhật cờ để click-through
@@ -507,6 +538,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
             setState(() {
               _isAppAlive = false;
             });
+          }
+          // Chủ động đóng overlay sau khi coi app là "chết" để đồng nhất hành vi.
+          try {
+            await FlutterOverlayWindow.closeOverlay();
+            debugPrint("🧹 Đã đóng overlay do app không còn heartbeat");
+          } catch (e) {
+            debugPrint("❌ Lỗi khi đóng overlay trong watchdog: $e");
           }
         }
       }
@@ -524,10 +562,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
 
   @override
   Widget build(BuildContext context) {
-
     if (!_isAppAlive) {
       // Khi app chết, trả về widget rỗng và trong suốt
-      return Container(color: Colors.transparent, width: 0, height: 0,);
+      return Container(color: Colors.transparent, width: 0, height: 0);
     }
 
     return Material(
@@ -724,43 +761,40 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                           )
                               : Container(
                             color: Colors.grey.shade900,
-                            child: Icon(
-                              Icons.casino,
-                              color: Colors.cyan,
-                            ),
+                            child: Icon(Icons.casino, color: Colors.cyan),
                           ),
                         ),
                       ),
                       Expanded(
-                          flex: 2,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Text(
-                                'Vòng cược: ${getRandomRound()}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: mainFontSize, // Cố định
-                                  fontWeight: FontWeight.w500,
-                                ),
+                        flex: 2,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Text(
+                              'Vòng cược: ${getRandomRound()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: mainFontSize, // Cố định
+                                fontWeight: FontWeight.w500,
                               ),
-                              Text(
-                                'Mức cược: ${getRandomMoney()}k',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: mainFontSize, // Cố định
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )
-                            ],
-                          )
-                      )
+                            ),
+                            Text(
+                              'Mức cược: ${getRandomMoney()}k',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: mainFontSize, // Cố định
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
