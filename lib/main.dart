@@ -362,16 +362,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     _subscription = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (!mounted) return;
 
-      //  Dù là data gì, cứ nhận được là "reset" thời gian
       _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
 
-      //  Kích hoạt Watchdog (nếu nó chưa chạy)
       if (_watchdogTimer == null || !_watchdogTimer!.isActive) {
         _startWatchdogTimer();
         debugPrint("🔥 Watchdog đã được kích hoạt.");
       }
 
-      //  Xử lý data
       if (data is Map && data['type'] == 'heartbeat') {
         debugPrint("💓 Overlay received heartbeat");
         if (!_isAppAlive) {
@@ -587,28 +584,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               ],
                             ),
                           ),
-                          // Expanded(
-                          //   child: Column(
-                          //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          //     crossAxisAlignment: CrossAxisAlignment.center,
-                          //     children: [
-                                // Image anh
-
-
-                                // Text(
-                                //   'Tỉ lệ thắng bàn',
-                                //   maxLines: 1,
-                                //   overflow: TextOverflow.ellipsis,
-                                //   textAlign: TextAlign.center,
-                                //   style: TextStyle(
-                                //     color: Colors.white,
-                                //     fontSize: mainFontSize, // Cố định
-                                //     fontWeight: FontWeight.w500,
-                                //   ),
-                                // ),
-                          //     ],
-                          //   ),
-                          // ),
                         ],
                       ),
                     ),
