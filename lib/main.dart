@@ -453,14 +453,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
   bool _hasReceivedFirstHeartbeat = false;
   bool _isAppAlive = true; // Trạng thái để ẨN/HIỆN
 
-  int getRandomRound() {
-    return _random.nextInt(120 - 50 + 1) + 50;
-  }
-
-  int getRandomMoney() {
-    return _random.nextInt(5) + 1;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -567,6 +559,18 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       return Container(color: Colors.transparent, width: 0, height: 0);
     }
 
+    final now = DateTime.now();
+
+    // Yêu cầu 1: Định dạng thời gian hiện tại (hh:mm)
+    final String currentTime =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+    // Yêu cầu 2: Tính thời gian tương lai (random 5-10 phút)
+    final int randomMinutes = _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
+    final futureTime = now.add(Duration(minutes: randomMinutes));
+    final String formattedFutureTime =
+        "${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}";
+
     return Material(
       color: Colors.transparent,
       child: LayoutBuilder(
@@ -613,7 +617,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
             child: Column(
               children: [
                 Expanded(
-                  flex: 6,
+                  flex: 8,
                   child: Row(
                     children: [
                       //Robot
@@ -738,7 +742,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                   ),
                 ),
                 Expanded(
-                  flex: 4,
+                  flex: 6,
                   child: Column(
                     children: [
                       Expanded(
@@ -771,7 +775,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Text(
-                              'Vòng cược: ${getRandomRound()}',
+                              currentTime,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -782,7 +786,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               ),
                             ),
                             Text(
-                              'Mức cược: ${getRandomMoney()}k',
+                              formattedFutureTime,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -795,6 +799,20 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                           ],
                         ),
                       ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Số vòng: ${getRandomRound()}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.yellow,
+                            fontSize: mainFontSize, // Cố định
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -804,5 +822,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         },
       ),
     );
+  }
+
+  int getRandomRound() {
+    return _random.nextInt(120 - 50 + 1) + 50;
   }
 }
