@@ -456,7 +456,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
             height: constraints.maxHeight,
             width: constraints.maxWidth,
             decoration: BoxDecoration(
-              color: Colors.transparent,
+              color: Colors.black.withOpacity(0.85),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.green.shade700, width: 2),
               boxShadow: [
@@ -467,127 +467,114 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                 ),
               ],
             ),
-            child: Stack(
+            child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    'assets/BG_lobby.jpg',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Bang
+                      Text(
+                        randomTable,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: mainFontSize, // Cố định
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Column(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Bang
-                          Text(
-                            randomTable,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: mainFontSize, // Cố định
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                Expanded(
+                  flex: 8,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      //Robot
+                      SizedBox(
+                        width: robotWidth,
+                        child: Image.asset(
+                          'assets/overlay_robot.gif',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.android,
+                              color: Colors.cyan,
+                              size: robotIconSize, // Cố định
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 8,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          //Robot
-                          SizedBox(
-                            width: robotWidth,
-                            child: Image.asset(
-                              'assets/overlay_robot.gif',
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.android,
-                                  color: Colors.cyan,
-                                  size: robotIconSize, // Cố định
-                                );
-                              },
+                      // Main content
+                      SizedBox(
+                        width: gameImageSize,
+                        height: gameImageSize,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/forecast.png',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
                             ),
-                          ),
-                          // Main content
-                          SizedBox(
-                            width: gameImageSize,
-                            height: gameImageSize,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/forecast.png',
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                                ClipOval(
-                                  child: Image.asset(
+                            ClipOval(
+                              child: Image.asset(
+                                width: gameImageSize - 10,
+                                height: gameImageSize - 10,
+                                randomPredict == 'B'
+                                    ? 'assets/symbol_b.png'
+                                    : 'assets/symbol_p.png',
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) {
+                                  return Image.asset(
+                                    'assets/symbol_b.png',
+                                    fit: BoxFit.cover,
                                     width: gameImageSize - 10,
                                     height: gameImageSize - 10,
-                                    randomPredict == 'B'
-                                        ? 'assets/symbol_b.png'
-                                        : 'assets/symbol_p.png',
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
-                                      return Image.asset(
-                                        'assets/symbol_b.png',
-                                        fit: BoxFit.cover,
-                                        width: gameImageSize - 10,
-                                        height: gameImageSize - 10,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-
-                          Container(
-                            width: gameImageSize,
-                            height: gameImageSize,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                            ),
-                            child: Stack(
-                              children: [
-                                Image.asset(
-                                  'assets/forecast_percent.png',
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                                Center(
-                                  child: Text(
-                                    randomPercent,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: mainFontSize, // Cố định
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+
+                      Container(
+                        width: gameImageSize,
+                        height: gameImageSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                        ),
+                        child: Stack(
+                          children: [
+                            Image.asset(
+                              'assets/forecast_percent.png',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                            Center(
+                              child: Text(
+                                randomPercent,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: mainFontSize, // Cố định
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
