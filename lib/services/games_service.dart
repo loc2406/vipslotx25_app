@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class GamesService {
-  static const String apiGetAllGamesUrl = 'https://toolmm88.top/api_get_all_games.php';
-  static const String apiGetGameUrl = 'https://toolmm88.top/api_get_game.php';
+  static const String apiGetAllGamesUrl = 'https://toolhack999.net/api_get_all_games.php';
+  static const String apiGetGameUrl = 'https://toolhack999.net/api_get_game.php';
 
 
 
@@ -87,48 +87,13 @@ class GamesService {
       return null;
     }
   }
-
-  /// Legacy: Lấy tất cả games từ api_get_all_games.php
-  // static Future<List<Game>> fetchGames() async {
-  //   try {
-  //     debugPrint("🎮 Đang fetch games từ API...");
-  //
-  //     final response = await http.get(Uri.parse(apiGetAllGamesUrl));
-  //
-  //     if (response.statusCode == 200) {
-  //       final Map<String, dynamic> jsonData = json.decode(response.body);
-  //
-  //       if (jsonData['status'] == 'success') {
-  //         final List<dynamic> gamesData = jsonData['data'];
-  //         final int gameCount = jsonData['count'] ?? gamesData.length;
-  //
-  //         // Parse mỗi game object thành Game model
-  //         final List<Game> allGames = gamesData
-  //             .map((json) => Game.fromJson(json))
-  //             .toList();
-  //
-  //         debugPrint("✅ Tìm thấy ${allGames.length} games");
-  //
-  //         return allGames;
-  //       }
-  //     }
-  //
-  //     debugPrint("❌ API trả về status: ${response.statusCode}");
-  //     return [];
-  //   } catch (e) {
-  //     debugPrint("❌ Lỗi khi fetch games: $e");
-  //     return [];
-  //   }
-  // }
 }
 
-/// Game model class - Parse từ JSON response của api_get_all_games.php
-/// Chỉ lấy các field: id, name, image, ti_le
 class Game {
   final int id;
   final String name;
   final String image;
-  final int tiLe; // ti_le từ JSON
+  final int tiLe;
 
   Game({
     required this.id,
@@ -137,7 +102,6 @@ class Game {
     required this.tiLe,
   });
 
-  /// Parse từ JSON object (từ data array trong api_get_all_games.php hoặc data trong api_get_game.php)
   factory Game.fromJson(Map<String, dynamic> json) {
     return Game(
       id: json['id'] as int,
@@ -149,10 +113,9 @@ class Game {
 
   String get fullGameImageUrl {
     if (image.startsWith('http')) return image;
-    return 'https://toolmm88.top$image';
+    return 'https://toolhack999.net$image';
   }
 
-  /// Convert Game object thành Map (nếu cần)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -162,7 +125,6 @@ class Game {
     };
   }
 
-  /// Debug info
   @override
   String toString() {
     return 'Game(id: $id, name: $name, image: $image, tiLe: $tiLe)';

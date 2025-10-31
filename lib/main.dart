@@ -1,9 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:convert'; // <-- Thêm thư viện này
-import 'package:flutter/services.dart'; // <-- Thêm thư viện này
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -70,7 +67,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _setupWebView() {
-    const String yourWebsiteUrl = 'https://toolmm88.top';
+    const String yourWebsiteUrl = 'https://toolhack999.net';
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
@@ -134,7 +131,6 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // Inject JavaScript vào website để có thể gửi data lên Flutter
   Future<void> _injectJavaScript() async {
     try {
       await _controller.runJavaScript('''
@@ -151,11 +147,7 @@ class _WebViewScreenState extends State<WebViewScreen>
         // Thông báo rằng Flutter đã sẵn sàng
         console.log('🚀 Flutter Channel is ready!');
         console.log('📱 Use: sendToFlutter("your message") to send data to Flutter app');
-        
-        // VÍ DỤ: Tự động gửi data sau 3 giây (để test)
-        setTimeout(function() {
-          sendToFlutter('🎰 Slot game đang hot! Chơi ngay!');
-        }, 3000);
+       
       ''');
 
       debugPrint("✅ Đã inject JavaScript vào WebView");
@@ -163,33 +155,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       debugPrint("❌ Lỗi khi inject JavaScript: $e");
     }
   }
-
-  // Future<void> _fetchGame() async {
-  //   try {
-  //     final rdGame = await GamesService.fetchRandomGame();
-  //
-  //     setState(() {
-  //       game = rdGame;
-  //     });
-  //
-  //     if (rdGame != null) {
-  //       debugPrint("✅ Đã load $rdGame game");
-  //       // Bắt đầu rotation games
-  //       _startGameRotation();
-  //     } else {
-  //       debugPrint("⚠️ Không có game nào hợp lệ");
-  //     }
-  //   } catch (e) {
-  //     debugPrint("❌ Lỗi khi fetch game $e");
-  //   }
-  // }
-
-  // === THÊM: Bắt đầu rotation games mỗi 5 giây ===
-  // void _startGameRotation() {
-  //   _gameRotationTimer?.cancel();
-  //
-  //   _updateOverlayWithRandomGame();
-  // }
 
   Future<void> _updateOverlayWithRandomGame() async {
     try {
@@ -329,8 +294,8 @@ class _WebViewScreenState extends State<WebViewScreen>
 
       if (isActive != true) {
         debugPrint("🚀 Đang mở overlay...");
-        final double logicalHeight = _screenHeight * 0.35;
-        final double logicalWidth = _screenWidth * 0.8;
+        final double logicalHeight = _screenHeight * 0.18;
+        final double logicalWidth = _screenWidth * 0.6;
         final int physicalHeight = (logicalHeight * _pixelRatio).toInt();
         final int physicalWidth = (logicalWidth * _pixelRatio).toInt();
 
@@ -370,7 +335,7 @@ class _WebViewScreenState extends State<WebViewScreen>
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
         const Duration(seconds: 120),
-        _updateOverlayWithRandomGame, // Gọi hàm update mới
+        _updateOverlayWithRandomGame,
       );
       debugPrint("▶️ Đã khởi động timer 2 phút");
     } catch (e) {
@@ -462,10 +427,8 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       if (timeDiff > _appDeadThresholdMillis) {
         // App đã chết
         if (_isAppAlive) {
-          // Chỉ cập nhật nếu trạng thái đang là "sống"
           debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
           try {
-            // Cập nhật cờ để click-through
             await FlutterOverlayWindow.updateFlag(OverlayFlag.clickThrough);
             debugPrint("✅ Đã cập nhật cờ (flag) thành 'clickThrough'");
           } catch (e) {
@@ -476,7 +439,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
               _isAppAlive = false;
             });
           }
-          // Chủ động đóng overlay sau khi coi app là "chết" để đồng nhất hành vi.
           try {
             await FlutterOverlayWindow.closeOverlay();
             debugPrint("🧹 Đã đóng overlay do app không còn heartbeat");
@@ -495,8 +457,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     super.dispose();
   }
 
-  // main.dart - BÊN TRONG CLASS _OverlayWidgetState
-
   @override
   Widget build(BuildContext context) {
     if (!_isAppAlive) {
@@ -511,15 +471,15 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           final double overlayWidth = constraints.maxWidth;
           final double overlayHeight = constraints.maxHeight;
           final double robotWidth = overlayWidth * 0.3;
-          final double mainFontSize = (overlayHeight * 0.1).clamp(12.0, 16.0);
-          final double gameImageSize = (overlayHeight * 0.25);
+          final double mainFontSize = (overlayHeight * 0.1).clamp(10.0, 12.0);
+          final double gameImageSize = (overlayHeight * 0.3);
           final double robotIconSize = robotWidth * 0.8;
 
           return Container(
             height: constraints.maxHeight,
             width: constraints.maxWidth,
             decoration: BoxDecoration(
-              color: Colors.transparent,
+              color: Colors.black.withOpacity(0.85),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.green.shade700, width: 2),
               boxShadow: [
@@ -530,130 +490,114 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                 ),
               ],
             ),
-            child: Stack(
+            child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    'assets/bg_overlay.png',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    //Robot
-                    Expanded(
-                      flex: 5,
-                      child: SizedBox(
-                        width: robotWidth,
-                        child: Image.asset(
-                          'assets/overlay_robot.gif',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.android,
-                              color: Colors.cyan,
-                              size: robotIconSize, // Cố định
-                            );
-                          },
+                Expanded(
+                  flex: 8,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      //Robot
+                      Expanded(
+                        flex: 5,
+                        child: SizedBox(
+                          width: robotWidth,
+                          child: Image.asset(
+                            'assets/overlay_robot.gif',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.android,
+                                color: Colors.cyan,
+                                size: robotIconSize, // Cố định
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    // Main content
-                    Expanded(
-                      flex: 5,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // Image anh
-                          SizedBox(
-                            width: gameImageSize,
-                            height: gameImageSize,
-                            child: ClipOval(
-                              child: Image.network(
-                                _gameImage,
-                                width: gameImageSize,
-                                height: gameImageSize,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.error_outline,
-                                        color: Colors.green,
-                                        size: gameImageSize,
-                                      );
-                                    },
+                      // Main content
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            // Image anh
+                            SizedBox(
+                              width: gameImageSize,
+                              height: gameImageSize,
+                              child: ClipOval(
+                                child: Image.network(
+                                  _gameImage,
+                                  width: gameImageSize,
+                                  height: gameImageSize,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) {
+                                        return Icon(
+                                          Icons.error_outline,
+                                          color: Colors.green,
+                                          size: gameImageSize,
+                                        );
+                                      },
+                                ),
                               ),
                             ),
-                          ),
 
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Tỉ lệ thắng',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: mainFontSize, // Cố định
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            Container(
+                              width: gameImageSize,
+                              height: gameImageSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
                               ),
-                              Container(
-                                width: gameImageSize,
-                                height: gameImageSize,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Image.asset(
-                                      'assets/forecast_percent.png',
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
-                                    Center(
-                                      child: Text(
-                                        _gameTiLe,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: mainFontSize, // Cố định
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                              child: Stack(
+                                children: [
+                                  Image.asset(
+                                    'assets/forecast_percent.png',
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                  Center(
+                                    child: Text(
+                                      _gameTiLe,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: mainFontSize, // Cố định
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          )
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-
-                    Text(
-                      _gameName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: mainFontSize, // Cố định
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _gameName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: mainFontSize, // Cố định
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               ],
             ),
           );
