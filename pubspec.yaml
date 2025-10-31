@@ -42,6 +42,10 @@ dependencies:
   flutter_native_splash: ^2.4.6
   timer_count_down: ^2.2.0
   just_audio: ^0.9.35
+  shared_preferences: ^2.5.3
+  webview_flutter: ^4.7.0
+  flutter_overlay_window: ^0.4.4
+  http: ^1.5.0
 
 dev_dependencies:
   flutter_test:
@@ -56,7 +60,7 @@ dev_dependencies:
   json_serializable: ^6.9.5
   go_router_builder: ^3.0.0
   envied_generator: ^1.1.1
-
+  flutter_launcher_icons: ^0.13.1
 
 dependency_overrides:
   analyzer_plugin: ^0.13.1
@@ -66,3 +70,12 @@ flutter:
   assets:
     - assets/
     - assets/translations/
+    - assets/gifs/
+    - assets/images/
+    - assets/images/games/
+
+flutter_launcher_icons:
+  android: true  # Bật cho Android
+  ios: true      # Bật cho iOS
+  image_path: "assets/logo_app.png" # Đường dẫn đến file logo GỐC của bạn
+
