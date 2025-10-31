@@ -547,122 +547,120 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                     height: double.infinity,
                   ),
                 ),
-                Expanded(
-                  child: Row(
-                    children: [
-                      //Robot
-                      SizedBox(
-                        width: robotWidth,
-                        child: Image.asset(
-                          'assets/overlay_robot.gif',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.android,
-                              color: Colors.cyan,
-                              size: robotIconSize, // Cố định
-                            );
-                          },
-                        ),
+                Row(
+                  children: [
+                    //Robot
+                    SizedBox(
+                      width: robotWidth,
+                      child: Image.asset(
+                        'assets/overlay_robot.gif',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.android,
+                            color: Colors.cyan,
+                            size: robotIconSize, // Cố định
+                          );
+                        },
                       ),
-                      // Main content
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Bang
-                            Text(
-                              randomTable,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: mainFontSize, // Cố định
-                                fontWeight: FontWeight.bold,
-                              ),
+                    ),
+                    // Main content
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Bang
+                          Text(
+                            randomTable,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: mainFontSize, // Cố định
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
 
-                            // Image anh
-                            SizedBox(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Image.asset(
-                                    'assets/forecast.png',
+                          // Image anh
+                          SizedBox(
+                            width: gameImageSize,
+                            height: gameImageSize,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/forecast.png',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                                ClipOval(
+                                  child: Image.asset(
+                                    width: gameImageSize - 10,
+                                    height: gameImageSize - 10,
+                                    randomPredict == 'B'
+                                        ? 'assets/symbol_b.png'
+                                        : 'assets/symbol_p.png',
                                     fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                          return Image.asset(
+                                            'assets/symbol_b.png',
+                                            fit: BoxFit.cover,
+                                            width: gameImageSize - 10,
+                                            height: gameImageSize - 10,
+                                          );
+                                        },
                                   ),
-                                  ClipOval(
-                                    child: Image.asset(
-                                      width: gameImageSize - 10,
-                                      height: gameImageSize - 10,
-                                      randomPredict == 'B'
-                                          ? 'assets/symbol_b.png'
-                                          : 'assets/symbol_p.png',
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Image.asset(
-                                              'assets/symbol_b.png',
-                                              fit: BoxFit.cover,
-                                              width: gameImageSize - 10,
-                                              height: gameImageSize - 10,
-                                            );
-                                          },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Text(
+                            'Tỉ lệ thắng bàn',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: mainFontSize, // Cố định
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Container(
+                            width: gameImageSize,
+                            height: gameImageSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                            ),
+                            child: Stack(
+                              children: [
+                                Image.asset(
+                                  'assets/forecast_percent.png',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                                Center(
+                                  child: Text(
+                                    randomPercent,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: mainFontSize, // Cố định
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-
-                            Text(
-                              'Tỉ lệ thắng bàn',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: mainFontSize, // Cố định
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Container(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                              child: Stack(
-                                children: [
-                                  Image.asset(
-                                    'assets/forecast_percent.png',
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                  Center(
-                                    child: Text(
-                                      randomPercent,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: mainFontSize, // Cố định
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
