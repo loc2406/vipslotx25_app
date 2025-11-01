@@ -478,126 +478,141 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           return Container(
             height: constraints.maxHeight,
             width: constraints.maxWidth,
+            // Chiều rộng cố định
+            padding: EdgeInsets.all(10),
+            // Padding cố định
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.85),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.green.shade700, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.cyan.withOpacity(0.3),
+                  color: Colors.green.withOpacity(0.3),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
               ],
             ),
-            child: Column(
+            child: Row(
               children: [
+                //Robot
+                SizedBox(
+                  width: robotWidth,
+                  child: Image.asset(
+                    'assets/overlay_robot.gif',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.android,
+                        color: Colors.green,
+                        size: robotIconSize, // Cố định
+                      );
+                    },
+                  ),
+                ),
+                // Main content
                 Expanded(
-                  flex: 8,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      //Robot
-                      Expanded(
-                        flex: 5,
-                        child: SizedBox(
-                          width: robotWidth,
-                          child: Image.asset(
-                            'assets/overlay_robot.gif',
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.android,
-                                color: Colors.cyan,
-                                size: robotIconSize, // Cố định
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      // Main content
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // Image anh
-                            SizedBox(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              child: ClipOval(
-                                child: Image.network(
-                                  _gameImage,
-                                  width: gameImageSize,
-                                  height: gameImageSize,
-                                  fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) {
-                                        return Icon(
-                                          Icons.error_outline,
-                                          color: Colors.green,
-                                          size: gameImageSize,
-                                        );
-                                      },
-                                ),
+                      // Ti le
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: overlayWidth * 0.03, // Tỉ lệ
+                              vertical: overlayHeight * 0.03, // Tỉ lệ
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade800,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$_gameTiLe%',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: mainFontSize, // Cố định
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                          ),
+                        ],
+                      ),
 
-                            Container(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                              child: Stack(
-                                children: [
-                                  Image.asset(
-                                    'assets/forecast_percent.png',
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                  Center(
-                                    child: Text(
-                                      _gameTiLe,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: mainFontSize, // Cố định
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      _gameImage.isNotEmpty ?  Container(
+                        width: gameImageSize,
+                        height: gameImageSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.green,
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withOpacity(0.5),
+                              blurRadius: 15,
+                              spreadRadius: 2,
                             ),
                           ],
+                        ),
+                        alignment: Alignment.center,
+                        child: ClipOval(
+                            child: Image.network(
+                              _gameImage,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.error_outline,
+                                  color: Colors.green,
+                                  size: gameImageSize, // Cố định
+                                );
+                              },
+                            )
+                        ),
+                      ) : Container(
+                        width: gameImageSize,
+                        height: gameImageSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.error_outline,
+                          color: Colors.green,
+                          size: gameImageSize, // Cố định
+                        )
+                      ),
+
+                      // Game name
+                      Flexible(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8, // Cố định
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _gameName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: mainFontSize, // Cố định
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _gameName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
               ],
             ),
           );
