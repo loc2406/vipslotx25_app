@@ -6,14 +6,14 @@ class Game {
   final int id;
   final String name;
   final String image;
-  final String slotImage;
+  final String cateImage;
   final int tiLe;
 
   Game({
     required this.id,
     required this.name,
     required this.image,
-    required this.slotImage,
+    required this.cateImage,
     required this.tiLe,
   });
 
@@ -22,7 +22,7 @@ class Game {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       image: json['image'] ?? '',
-      slotImage: json['slot_image'] ?? '',
+      cateImage: json['category_image'] ?? '',
       tiLe: int.tryParse(json['ti_le'].toString()) ?? 0,
     );
   }
@@ -33,16 +33,15 @@ class Game {
     return 'https://toolvip2025.top$image';
   }
 
-  String get fullSlotImageUrl {
-    if (slotImage.startsWith('http')) return slotImage;
-    return 'https://toolvip2025.top$slotImage';
+  String get fullCateImageUrl {
+    if (cateImage.startsWith('http')) return cateImage;
+    return 'https://toolvip2025.top$cateImage';
   }
 }
 
 class GamesService {
-  static const String apiUrl = 'https://toolvip2025.top/api/games.php';
+  static const String apiUrl = 'https://toolvip2025.top/api/games_by_category.php';
 
-  // Lấy danh sách games có ti_le >= 70
   static Future<List<Game>> fetchHotGames() async {
     try {
       debugPrint("🎮 Đang fetch games từ API...");

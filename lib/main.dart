@@ -170,7 +170,6 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // === THÊM: Fetch hot games (ti_le >= 70) ===
   Future<void> _fetchHotGames() async {
     try {
       final games = await GamesService.fetchHotGames();
@@ -229,20 +228,17 @@ class _WebViewScreenState extends State<WebViewScreen>
       // 3. KIỂM TRA TÍNH HỢP LỆ CỦA DATA
       //    (Giả định: "hợp lệ" là khi có cả 2 ảnh)
       final bool isDataValid =
-          (randomGame.fullGameImageUrl != null &&
-              randomGame.fullGameImageUrl!.isNotEmpty) &&
-              (randomGame.fullSlotImageUrl != null &&
-                  randomGame.fullSlotImageUrl!.isNotEmpty);
+          (randomGame.fullGameImageUrl.isNotEmpty) &&
+          (randomGame.fullCateImageUrl.isNotEmpty);
 
       if (isDataValid) {
-        // 4. HỢP LỆ: Gửi data và hẹn giờ 2 PHÚT
         debugPrint(
           "✅ Dữ liệu hợp lệ (thử lần ${retryCount + 1}). Gửi game: ${randomGame.name}",
         );
         await FlutterOverlayWindow.shareData({
           'name': randomGame.name,
           'image': randomGame.fullGameImageUrl,
-          'slot_image': randomGame.fullSlotImageUrl,
+          'cate_image': randomGame.fullCateImageUrl,
           'ti_le': randomGame.tiLe.toString(),
         });
 
@@ -395,16 +391,12 @@ class _WebViewScreenState extends State<WebViewScreen>
         // SỬA LỖI DATA: Không gửi 'message' nữa
         debugPrint("🔄 Overlay đã hiển thị. Bỏ qua bước tạo.");
       }
-
-      // 4. LUÔN LUÔN GỬI DATA VÀ BẮT ĐẦU NHỊP TIM
-      // (Dù overlay vừa được tạo hay đã có sẵn)
-
       if (_hotGames.isNotEmpty) {
         final randomGame = _hotGames[_random.nextInt(_hotGames.length)];
         await FlutterOverlayWindow.shareData({
           'name': randomGame.name,
           'image': randomGame.fullGameImageUrl,
-          'slot_image': randomGame.fullSlotImageUrl,
+          'cate_image': randomGame.fullCateImageUrl,
           'ti_le': randomGame.tiLe.toString(),
         });
         debugPrint("✅ Gửi data game lên overlay: ${randomGame.name}");
@@ -412,7 +404,7 @@ class _WebViewScreenState extends State<WebViewScreen>
         await FlutterOverlayWindow.shareData({
           'name': 'VipSlotX25',
           'image': '',
-          'slot_image': '',
+          'cate_image': '',
           'ti_le': '100',
         });
       }
@@ -443,14 +435,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
   String _gameName = "Đang tải...";
   String _gameImage = "";
   String _gameTiLe = "0";
-  String _slotImage = "";
+  String _cateImage = "";
   StreamSubscription? _subscription;
   final Random _random = Random();
 
   Timer? _watchdogTimer; // "Chó canh gác"
   int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
   static const int _appDeadThresholdMillis = 3000; // Chờ 3 giây
-  bool _hasReceivedFirstHeartbeat = false;
   bool _isAppAlive = true; // Trạng thái để ẨN/HIỆN
 
   @override
@@ -497,7 +488,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       setState(() {
         _gameName = data['name'] ?? 'Unknown Game';
         _gameImage = data['image'] ?? '';
-        _slotImage = data['slot_image'] ?? '';
+        _cateImage = data['cate_image'] ?? '';
         _gameTiLe = data['ti_le'] ?? '0';
         _isAppAlive = true; // <-- ĐẶT LẠI THÀNH TRUE
       });
@@ -566,7 +557,8 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
     // Yêu cầu 2: Tính thời gian tương lai (random 5-10 phút)
-    final int randomMinutes = _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
+    final int randomMinutes =
+        _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
     final futureTime = now.add(Duration(minutes: randomMinutes));
     final String formattedFutureTime =
         "${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}";
@@ -591,10 +583,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           // Kích thước icon (nếu lỗi ảnh)
           final double robotIconSize = robotWidth * 0.8;
           final double gameIconSize = gameImageSize * 0.7;
-          final double slotIconSize = slotImageSize * 0.7;
-
-          debugPrint("OVERLAY_HEIGHT ============== $overlayHeight");
-          debugPrint("OVERLAY_WIDTH ============== $overlayWidth");
 
           return Container(
             height: constraints.maxHeight,
@@ -686,28 +674,28 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               child: ClipOval(
                                 child: _gameImage.isNotEmpty
                                     ? Image.network(
-                                  _gameImage,
-                                  fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey.shade900,
-                                      child: Icon(
-                                        Icons.casino,
-                                        color: Colors.cyan,
-                                        size: gameIconSize, // Cố định
-                                      ),
-                                    );
-                                  },
-                                )
+                                        _gameImage,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade900,
+                                                child: Icon(
+                                                  Icons.casino,
+                                                  color: Colors.cyan,
+                                                  size: gameIconSize, // Cố định
+                                                ),
+                                              );
+                                            },
+                                      )
                                     : Container(
-                                  color: Colors.grey.shade900,
-                                  child: Icon(
-                                    Icons.casino,
-                                    color: Colors.cyan,
-                                    size: gameIconSize, // Cố định
-                                  ),
-                                ),
+                                        color: Colors.grey.shade900,
+                                        child: Icon(
+                                          Icons.casino,
+                                          color: Colors.cyan,
+                                          size: gameIconSize, // Cố định
+                                        ),
+                                      ),
                               ),
                             ),
 
@@ -749,24 +737,24 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                         flex: 2,
                         child: Container(
                           margin: EdgeInsets.symmetric(horizontal: 20),
-                          child: _slotImage.isNotEmpty
+                          child: _cateImage.isNotEmpty
                               ? Image.network(
-                            _slotImage,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade900,
-                                child: Icon(
-                                  Icons.casino,
-                                  color: Colors.cyan,
-                                ),
-                              );
-                            },
-                          )
+                                  _cateImage,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade900,
+                                      child: Icon(
+                                        Icons.casino,
+                                        color: Colors.cyan,
+                                      ),
+                                    );
+                                  },
+                                )
                               : Container(
-                            color: Colors.grey.shade900,
-                            child: Icon(Icons.casino, color: Colors.cyan),
-                          ),
+                                  color: Colors.grey.shade900,
+                                  child: Icon(Icons.casino, color: Colors.cyan),
+                                ),
                         ),
                       ),
                       Expanded(
