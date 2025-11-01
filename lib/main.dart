@@ -294,7 +294,7 @@ class _WebViewScreenState extends State<WebViewScreen>
 
       if (isActive != true) {
         debugPrint("🚀 Đang mở overlay...");
-        final double logicalHeight = _screenHeight * 0.18;
+        final double logicalHeight = _screenHeight * 0.25;
         final double logicalWidth = _screenWidth * 0.6;
         final int physicalHeight = (logicalHeight * _pixelRatio).toInt();
         final int physicalWidth = (logicalWidth * _pixelRatio).toInt();
@@ -464,6 +464,16 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       return Container(color: Colors.transparent, width: 0, height: 0);
     }
 
+    final now = DateTime.now();
+
+    final String currentTime =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+    final int randomMinutes = _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
+    final futureTime = now.add(Duration(minutes: randomMinutes));
+    final String formattedFutureTime =
+        "${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}";
+
     return Material(
       color: Colors.transparent,
       child: LayoutBuilder(
@@ -478,7 +488,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
           return Container(
             height: constraints.maxHeight,
             width: constraints.maxWidth,
-            // Chiều rộng cố định
             padding: EdgeInsets.all(10),
             // Padding cố định
             decoration: BoxDecoration(
@@ -493,124 +502,176 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                //Robot
-                SizedBox(
-                  width: robotWidth,
-                  child: Image.asset(
-                    'assets/overlay_robot.gif',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.android,
-                        color: Colors.green,
-                        size: robotIconSize, // Cố định
-                      );
-                    },
-                  ),
-                ),
-                // Main content
                 Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  flex: 8,
+                  child: Row(
                     children: [
-                      // Ti le
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: overlayWidth * 0.03, // Tỉ lệ
-                              vertical: overlayHeight * 0.03, // Tỉ lệ
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade800,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '$_gameTiLe%',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: mainFontSize, // Cố định
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                      //Robot
+                      SizedBox(
+                        width: robotWidth,
+                        child: Image.asset(
+                          'assets/overlay_robot.gif',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.android,
+                              color: Colors.green,
+                              size: robotIconSize, // Cố định
+                            );
+                          },
+                        ),
                       ),
+                      // Main content
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            // Ti le
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: overlayWidth * 0.03, // Tỉ lệ
+                                    vertical: overlayHeight * 0.03, // Tỉ lệ
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade800,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '$_gameTiLe%',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: mainFontSize, // Cố định
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
 
-                      _gameImage.isNotEmpty ?  Container(
-                        width: gameImageSize,
-                        height: gameImageSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.green,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withOpacity(0.5),
-                              blurRadius: 15,
-                              spreadRadius: 2,
+                            _gameImage.isNotEmpty ?  Container(
+                              width: gameImageSize,
+                              height: gameImageSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.green,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.5),
+                                    blurRadius: 15,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: ClipOval(
+                                  child: Image.network(
+                                    _gameImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.error_outline,
+                                        color: Colors.green,
+                                        size: gameImageSize, // Cố định
+                                      );
+                                    },
+                                  )
+                              ),
+                            ) : Container(
+                              width: gameImageSize,
+                              height: gameImageSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.error_outline,
+                                color: Colors.green,
+                                size: gameImageSize, // Cố định
+                              )
+                            ),
+
+                            // Game name
+                            Flexible(
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8, // Cố định
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _gameName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: mainFontSize, // Cố định
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        alignment: Alignment.center,
-                        child: ClipOval(
-                            child: Image.network(
-                              _gameImage,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.error_outline,
-                                  color: Colors.green,
-                                  size: gameImageSize, // Cố định
-                                );
-                              },
-                            )
-                        ),
-                      ) : Container(
-                        width: gameImageSize,
-                        height: gameImageSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.error_outline,
-                          color: Colors.green,
-                          size: gameImageSize, // Cố định
-                        )
                       ),
-
-                      // Game name
-                      Flexible(
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8, // Cố định
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _gameName,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: mainFontSize, // Cố định
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                        currentTime,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: mainFontSize, // Cố định
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        formattedFutureTime,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: mainFontSize, // Cố định
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Số vòng: ${getRandomRound()}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.yellow,
+                      fontSize: mainFontSize, // Cố định
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -619,5 +680,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         },
       ),
     );
+  }
+
+  int getRandomRound() {
+    return _random.nextInt(120 - 50 + 1) + 50;
   }
 }
