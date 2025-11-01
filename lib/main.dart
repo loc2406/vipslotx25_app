@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart';
 
@@ -6,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'overlay_widget.dart';
 import 'services/games_service.dart';
 
 @pragma('vm:entry-point')
@@ -24,8 +26,16 @@ void overlayMain() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isLoggedIn = false;
+  Map<String, dynamic>? _userInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +43,51 @@ class MyApp extends StatelessWidget {
       title: ' Tool Quét lá bài BCR V92',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const WebViewScreen(),
+      home: WebViewScreen(initialUrl: 'https://toolmm88.top',  onLoginStatusChanged: (isLoggedIn) {
+        setState(() {
+          _isLoggedIn = isLoggedIn;
+        });
+        // Tùy chỉnh giao diện dựa trên trạng thái đăng nhập
+        _customizeUI(isLoggedIn);
+      },
+        onLoginSuccess: (userInfo) {
+          setState(() {
+            _userInfo = userInfo;
+          });
+          // Thực hiện các hành động sau khi đăng nhập thành công
+          _onLoginSuccess(userInfo);
+        },),
     );
+  }
+
+  void _customizeUI(bool isLoggedIn) {
+    if (isLoggedIn) {
+      debugPrint('User đã đăng nhập - Tùy chỉnh UI');
+    } else {
+      debugPrint('User chưa đăng nhập');
+    }
+  }
+
+  void _onLoginSuccess(Map<String, dynamic>? userInfo) {
+    debugPrint('Đăng nhập thành công với thông tin: $userInfo');
+
+    if (userInfo != null && userInfo['userToken'] != null) {
+      debugPrint('User token: ${userInfo['userToken']}');
+    }
   }
 }
 
 class WebViewScreen extends StatefulWidget {
-  const WebViewScreen({super.key});
+  const WebViewScreen({
+    super.key,
+    required this.initialUrl,
+    this.onLoginStatusChanged,
+    this.onLoginSuccess,
+  });
+
+  final String initialUrl;
+  final Function(bool isLoggedIn)? onLoginStatusChanged;
+  final Function(Map<String, dynamic>? userInfo)? onLoginSuccess;
 
   @override
   State<WebViewScreen> createState() => _WebViewScreenState();
@@ -49,18 +97,21 @@ class _WebViewScreenState extends State<WebViewScreen>
     with WidgetsBindingObserver {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _isLoggedIn = false;
+  late final String initialUrl;
 
   Timer? _gameRotationTimer;
   double _screenHeight = 400;
   double _screenWidth = 800;
   double _pixelRatio = 1.0;
 
-  bool _isOverlayProcessing = false; // "Khóa" chống Race Condition
-  Timer? _aliveTimer; // "Nhịp tim" (Heartbeat)
+  bool _isOverlayProcessing = false;
+  Timer? _aliveTimer;
 
   @override
   void initState() {
     super.initState();
+    initialUrl = widget.initialUrl;
     WidgetsBinding.instance.addObserver(this);
     _closeOverlayIfOpen();
     _checkAndRequestOverlayPermission();
@@ -68,25 +119,26 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _setupWebView() {
-    const String yourWebsiteUrl = 'https://toolhack999.net';
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
       ..addJavaScriptChannel(
         'FlutterChannel',
-        onMessageReceived: (JavaScriptMessage message) {},
+        onMessageReceived: (JavaScriptMessage message) {
+          _handleMessage(message.message);
+        },
       )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) => setState(() => _isLoading = true),
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
-            _injectJavaScript();
+            // _injectJavaScript();
           },
           onWebResourceError: (WebResourceError error) {},
         ),
       )
-      ..loadRequest(Uri.parse(yourWebsiteUrl));
+      ..loadRequest(Uri.parse(initialUrl));
   }
 
   Future<void> _checkAndRequestOverlayPermission() async {
@@ -127,26 +179,118 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  Future<void> _injectJavaScript() async {
-    try {
-      await _controller.runJavaScript('''
-        window.sendToFlutter = function(message) {
-          if (window.FlutterChannel) {
-            FlutterChannel.postMessage(message);
-            console.log('✅ Sent to Flutter:', message);
-          } else {
-            console.error('❌ FlutterChannel not found!');
-          }
-        };
-        
-        console.log('🚀 Flutter Channel is ready!');
-        console.log('📱 Use: sendToFlutter("your message") to send data to Flutter app');
-        
-      ''');
+  // Future<void> _injectJavaScript() async {
+  //   try {
+  //     await _controller.runJavaScript('''
+  //       (function() {
+  //       // Kiểm tra nếu đã đăng nhập (có cookie hoặc session)
+  //       function checkLoginStatus() {
+  //         // Gửi trạng thái đăng nhập hiện tại
+  //         if (document.cookie.indexOf('user_token') !== -1) {
+  //           FlutterApp.postMessage(JSON.stringify({
+  //             type: 'login_status',
+  //             isLoggedIn: true
+  //           }));
+  //         }
+  //       }
+  //
+  //       // Override hàm Login() để bắt sự kiện đăng nhập thành công
+  //       if (typeof window.originalLogin === 'undefined') {
+  //         window.originalLogin = window.Login;
+  //         window.Login = function() {
+  //           if (window.originalLogin) {
+  //             window.originalLogin();
+  //           }
+  //           // Lắng nghe response từ AJAX
+  //           const originalAjax = \$.ajax;
+  //           \$.ajax = function(options) {
+  //             if (options.url && options.url.includes('login.php')) {
+  //               const originalSuccess = options.success;
+  //               options.success = function(res) {
+  //                 if (res.status == 'success') {
+  //                   // Gửi thông báo đăng nhập thành công đến Flutter
+  //                   FlutterApp.postMessage(JSON.stringify({
+  //                     type: 'login_success',
+  //                     message: res.message,
+  //                     timestamp: new Date().toISOString()
+  //                   }));
+  //
+  //                   // Gửi thông tin user nếu có
+  //                   setTimeout(function() {
+  //                     // Lấy thông tin user từ cookie hoặc localStorage nếu có
+  //                     FlutterApp.postMessage(JSON.stringify({
+  //                       type: 'user_info',
+  //                       userToken: document.cookie.match(/user_token=([^;]+)/) ?
+  //                                  document.cookie.match(/user_token=([^;]+)/)[1] : null
+  //                     }));
+  //                   }, 1000);
+  //                 }
+  //                 if (originalSuccess) {
+  //                   originalSuccess.apply(this, arguments);
+  //                 }
+  //               };
+  //             }
+  //             return originalAjax.apply(this, arguments);
+  //           };
+  //         }
+  //       }
+  //
+  //       // Lắng nghe thay đổi URL (khi redirect sau khi login)
+  //       let lastUrl = window.location.href;
+  //       setInterval(function() {
+  //         if (window.location.href !== lastUrl) {
+  //           lastUrl = window.location.href;
+  //           // Kiểm tra nếu không còn ở trang login
+  //           if (window.location.href.indexOf('login') === -1) {
+  //             checkLoginStatus();
+  //           }
+  //         }
+  //       }, 500);
+  //
+  //       // Kiểm tra trạng thái đăng nhập khi trang load
+  //       setTimeout(checkLoginStatus, 1000);
+  //
+  //       // Lắng nghe khi có thay đổi cookie (thông qua polling)
+  //       let lastCookie = document.cookie;
+  //       setInterval(function() {
+  //         if (document.cookie !== lastCookie) {
+  //           lastCookie = document.cookie;
+  //           checkLoginStatus();
+  //         }
+  //       }, 1000);
+  //     })();
+  //     ''');
+  //
+  //     debugPrint("✅ Đã inject JavaScript vào WebView");
+  //   } catch (e) {
+  //     debugPrint("❌ Lỗi khi inject JavaScript: $e");
+  //   }
+  // }
 
-      debugPrint("✅ Đã inject JavaScript vào WebView");
+  void _handleMessage(String message) {
+    try {
+      final data = json.decode(message);
+      final type = data['type'];
+
+      if (type == 'login_success') {
+        setState(() {
+          _isLoggedIn = true;
+        });
+        widget.onLoginStatusChanged?.call(true);
+        widget.onLoginSuccess?.call(data);
+      } else if (type == 'login_status') {
+        final isLoggedIn = data['isLoggedIn'] ?? false;
+        if (_isLoggedIn != isLoggedIn) {
+          setState(() {
+            _isLoggedIn = isLoggedIn;
+          });
+          widget.onLoginStatusChanged?.call(isLoggedIn);
+        }
+      } else if (type == 'user_info') {
+        widget.onLoginSuccess?.call(data);
+      }
     } catch (e) {
-      debugPrint("❌ Lỗi khi inject JavaScript: $e");
+      debugPrint('Error parsing message: $e');
     }
   }
 
@@ -312,286 +456,5 @@ class _WebViewScreenState extends State<WebViewScreen>
       _isOverlayProcessing = false;
       debugPrint("Trả khóa sau khi MỞ");
     }
-  }
-}
-
-class OverlayWidget extends StatefulWidget {
-  const OverlayWidget({super.key});
-
-  @override
-  State<OverlayWidget> createState() => _OverlayWidgetState();
-}
-
-class _OverlayWidgetState extends State<OverlayWidget> {
-  StreamSubscription? _subscription;
-  final Random _random = Random();
-  List<String> tableNames = [
-    "Bàn 1",
-    "Bàn 2",
-    "Bàn 3",
-    "Bàn 4",
-    "Bàn 5",
-    "Bàn 6",
-    "Bàn 7",
-    "Bàn 8",
-    "Bàn 9",
-    "Bàn 10",
-    "Bàn C01",
-    "Bàn C02",
-    "Bàn C03",
-    "Bàn C08",
-    "Bàn C09",
-    "Bàn C10",
-  ];
-  List<String> predicts = ["B", "P"];
-
-  Timer? _watchdogTimer;
-  int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-  static const int _appDeadThresholdMillis = 3000;
-  bool _isAppAlive = true;
-
-  @override
-  void initState() {
-    super.initState();
-    debugPrint("🟢 OverlayWidget initState được gọi");
-
-    _subscription = FlutterOverlayWindow.overlayListener.listen((data) async {
-      if (!mounted) return;
-
-      _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-
-      if (_watchdogTimer == null || !_watchdogTimer!.isActive) {
-        _startWatchdogTimer();
-        debugPrint("🔥 Watchdog đã được kích hoạt.");
-      }
-
-      if (data is Map && data['type'] == 'heartbeat') {
-        debugPrint("💓 Overlay received heartbeat");
-        if (!_isAppAlive) {
-          setState(() {
-            _isAppAlive = true;
-          });
-        }
-        try {
-          await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
-          debugPrint("✅ Đã cập nhật cờ (flag) thành 'defaultFlag'");
-        } catch (e) {
-          debugPrint("❌ Lỗi khi cập nhật cờ (flag) về 'defaultFlag': $e");
-        }
-        return;
-      }
-      debugPrint("🟢 Nhận data: $data");
-      setState(() {
-        _isAppAlive = true;
-      });
-    });
-  }
-
-  void _startWatchdogTimer() {
-    _watchdogTimer?.cancel();
-    _watchdogTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final timeDiff = now - _lastHeartbeatTime;
-
-      debugPrint("🔍 Watchdog check: Time since last heartbeat: ${timeDiff}ms");
-
-      if (timeDiff > _appDeadThresholdMillis) {
-        if (_isAppAlive) {
-          debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
-          try {
-            await FlutterOverlayWindow.updateFlag(OverlayFlag.clickThrough);
-            debugPrint("✅ Đã cập nhật cờ (flag) thành 'clickThrough'");
-          } catch (e) {
-            debugPrint("❌ Lỗi khi cập nhật cờ (flag): $e");
-          }
-          if (mounted) {
-            setState(() {
-              _isAppAlive = false;
-            });
-          }
-          try {
-            await FlutterOverlayWindow.closeOverlay();
-            debugPrint("🧹 Đã đóng overlay do app không còn heartbeat");
-          } catch (e) {
-            debugPrint("❌ Lỗi khi đóng overlay trong watchdog: $e");
-          }
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    _watchdogTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isAppAlive) {
-      return Container(color: Colors.transparent, width: 0, height: 0);
-    }
-
-    final String randomTable = getRandomTable();
-    final String randomPredict = getRandomPredict();
-    final String randomPercent = getRandomPercent();
-
-    return Material(
-      color: Colors.transparent,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final double overlayWidth = constraints.maxWidth;
-          final double overlayHeight = constraints.maxHeight;
-          final double robotWidth = overlayWidth * 0.3;
-          final double mainFontSize = (overlayHeight * 0.1).clamp(10.0, 12.0);
-          final double gameImageSize = (overlayHeight * 0.3);
-          final double robotIconSize = robotWidth * 0.8;
-
-          return Container(
-            height: constraints.maxHeight,
-            width: constraints.maxWidth,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade700, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.cyan.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Bang
-                      Text(
-                        randomTable,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 8,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      //Robot
-                      SizedBox(
-                        width: robotWidth,
-                        child: Image.asset(
-                          'assets/overlay_robot.gif',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.android,
-                              color: Colors.cyan,
-                              size: robotIconSize, // Cố định
-                            );
-                          },
-                        ),
-                      ),
-                      // Main content
-                      SizedBox(
-                        width: gameImageSize,
-                        height: gameImageSize,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/forecast.png',
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                            ClipOval(
-                              child: Image.asset(
-                                width: gameImageSize - 10,
-                                height: gameImageSize - 10,
-                                randomPredict == 'B'
-                                    ? 'assets/symbol_b.png'
-                                    : 'assets/symbol_p.png',
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'assets/symbol_b.png',
-                                    fit: BoxFit.cover,
-                                    width: gameImageSize - 10,
-                                    height: gameImageSize - 10,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      Container(
-                        width: gameImageSize,
-                        height: gameImageSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
-                        child: Stack(
-                          children: [
-                            Image.asset(
-                              'assets/forecast_percent.png',
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                            Center(
-                              child: Text(
-                                randomPercent,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: mainFontSize, // Cố định
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  String getRandomTable() {
-    final randomIndex = _random.nextInt(tableNames.length);
-    return tableNames[randomIndex];
-  }
-
-  String getRandomPredict() {
-    final randomIndex = _random.nextInt(predicts.length);
-    return predicts[randomIndex];
-  }
-
-  String getRandomPercent() {
-    final percent = _random.nextInt(99) + 1;
-    return '$percent%';
   }
 }
