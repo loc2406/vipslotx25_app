@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'toolslotvip',
+      title: ' Tool Quét lá bài BCR V92',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const WebViewScreen(),
@@ -314,10 +314,6 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 }
-
-// ============================================
-// OVERLAY WIDGET - Hiển thị khi app ở nền
-// ============================================
 
 class OverlayWidget extends StatefulWidget {
   const OverlayWidget({super.key});
