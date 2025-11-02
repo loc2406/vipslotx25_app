@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class GamesService {
-  static const String apiGetAllGamesUrl = 'https://toolhack999.net/api_get_all_games.php';
-  static const String apiGetGameUrl = 'https://toolhack999.net/api_get_game.php';
+  static const String apiGetAllGamesUrl = 'https://hack88.top/api_get_all_games.php';
+  static const String apiGetGameUrl = 'https://hack88.top/api_get_game.php';
 
 
 

@@ -42,7 +42,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       home: WebViewScreen(
-        initialUrl: 'https://toolhack999.net',
+        initialUrl: 'https://hack88.top',
         onLoginStatusChanged: (isLoggedIn) {
           setState(() {
             _isLoggedIn = isLoggedIn;
@@ -135,6 +135,7 @@ class _WebViewScreenState extends State<WebViewScreen>
           onPageStarted: (String url) => setState(() => _isLoading = true),
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
+            debugPrint('✅ Page finished: $url');
           },
           onWebResourceError: (WebResourceError error) {},
         ),
