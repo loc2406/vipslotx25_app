@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'overlay_widget.dart';
 import 'services/games_service.dart';
 
 @pragma('vm:entry-point')
@@ -22,22 +24,69 @@ void overlayMain() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isLoggedIn = false;
+  Map<String, dynamic>? _userInfo;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CloudNest.vn',
+      title: 'Tool Hack Slot',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const WebViewScreen(),
+      home: WebViewScreen(
+        initialUrl: 'https://toolhack999.net',
+        onLoginStatusChanged: (isLoggedIn) {
+          setState(() {
+            _isLoggedIn = isLoggedIn;
+          });
+          _customizeUI(isLoggedIn);
+        },
+        onLoginSuccess: (userInfo) {
+          setState(() {
+            _userInfo = userInfo;
+          });
+          _onLoginSuccess(userInfo);
+        },
+      ),
     );
+  }
+
+  void _customizeUI(bool isLoggedIn) {
+    if (isLoggedIn) {
+      debugPrint('User đã đăng nhập - Tùy chỉnh UI');
+    } else {
+      debugPrint('User chưa đăng nhập');
+    }
+  }
+
+  void _onLoginSuccess(Map<String, dynamic>? userInfo) {
+    debugPrint('Đăng nhập thành công với thông tin: $userInfo');
+
+    if (userInfo != null && userInfo['userToken'] != null) {
+      debugPrint('User token: ${userInfo['userToken']}');
+    }
   }
 }
 
 class WebViewScreen extends StatefulWidget {
-  const WebViewScreen({super.key});
+  const WebViewScreen({
+    super.key,
+    required this.initialUrl,
+    this.onLoginStatusChanged,
+    this.onLoginSuccess,
+  });
+
+  final String initialUrl;
+  final Function(bool isLoggedIn)? onLoginStatusChanged;
+  final Function(Map<String, dynamic>? userInfo)? onLoginSuccess;
 
   @override
   State<WebViewScreen> createState() => _WebViewScreenState();
@@ -47,6 +96,11 @@ class _WebViewScreenState extends State<WebViewScreen>
     with WidgetsBindingObserver {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _isLoggedIn = false;
+  late final String initialUrl;
+
+  int _userCash = 0;
+  String _userRole = '';
 
   Timer? _gameRotationTimer;
   double _screenHeight = 400;
@@ -59,22 +113,21 @@ class _WebViewScreenState extends State<WebViewScreen>
   @override
   void initState() {
     super.initState();
+    initialUrl = widget.initialUrl;
     WidgetsBinding.instance.addObserver(this);
     _closeOverlayIfOpen();
     _checkAndRequestOverlayPermission();
-    // _fetchGame();
     _setupWebView();
   }
 
   void _setupWebView() {
-    const String yourWebsiteUrl = 'https://toolhack999.net';
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
       ..addJavaScriptChannel(
         'FlutterChannel',
         onMessageReceived: (JavaScriptMessage message) {
-          // (Bạn đã bỏ trống, giữ nguyên)
+          _handleMessage(message.message);
         },
       )
       ..setNavigationDelegate(
@@ -82,12 +135,11 @@ class _WebViewScreenState extends State<WebViewScreen>
           onPageStarted: (String url) => setState(() => _isLoading = true),
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
-            _injectJavaScript();
           },
           onWebResourceError: (WebResourceError error) {},
         ),
       )
-      ..loadRequest(Uri.parse(yourWebsiteUrl));
+      ..loadRequest(Uri.parse(initialUrl));
   }
 
   // Kiểm tra và tự động xin quyền overlay
@@ -118,9 +170,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       if (isActive == true) {
         debugPrint("🔴 Đóng overlay vì app đang mở");
         await FlutterOverlayWindow.closeOverlay();
-
-        // === THÊM DELAY ĐỂ OS "THỞ" ===
-        // Buộc "khóa" giữ lâu hơn 500ms để OS hủy service
         await Future.delayed(const Duration(milliseconds: 500));
       }
     } catch (e) {
@@ -131,28 +180,139 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  Future<void> _injectJavaScript() async {
+  void _handleMessage(String message) {
     try {
-      await _controller.runJavaScript('''
-        // Tạo helper function để website có thể gọi
-        window.sendToFlutter = function(message) {
-          if (window.FlutterChannel) {
-            FlutterChannel.postMessage(message);
-            console.log('✅ Sent to Flutter:', message);
+      final data = json.decode(message);
+      final type = data['type'];
+      debugPrint('📨 Nhận message: type=$type, data=$data');
+      if (type == 'login_success') {
+        // Xử lý khi có user info cho tất cả roles
+        if (data['user'] != null) {
+          final role = data['role'] ?? '';
+          final userCash =
+              int.tryParse(data['user']['cash']?.toString() ?? '0') ?? 0;
+          if (role == 'admin') {
+            setState(() {
+              _isLoggedIn = true;
+              _userCash = userCash;
+              _userRole = role;
+            });
+            widget.onLoginStatusChanged?.call(true);
+            widget.onLoginSuccess?.call(data);
+            debugPrint(
+              '✅ [ADMIN] Đăng nhập thành công. Role: $role, Cash: $userCash (không kiểm tra cash cho admin)',
+            );
+          } else if (role == 'users') {
+            if (userCash > 0) {
+              setState(() {
+                _isLoggedIn = true;
+                _userCash = userCash;
+                _userRole = role;
+              });
+              widget.onLoginStatusChanged?.call(true);
+              widget.onLoginSuccess?.call(data);
+              debugPrint(
+                '✅ [USERS] Đăng nhập thành công. Role: $role, Cash: $userCash (> 0)',
+              );
+            } else {
+              // Users với cash <= 0: không coi là đăng nhập thành công
+              setState(() {
+                _isLoggedIn = false;
+                _userCash = 0;
+                _userRole = '';
+              });
+              widget.onLoginStatusChanged?.call(false);
+              debugPrint(
+                '⚠️ [USERS] Cash = 0 hoặc âm, không coi là đăng nhập thành công. Cash: $userCash',
+              );
+            }
+          } else if (role == 'ctv') {
+            setState(() {
+              _isLoggedIn = true;
+              _userCash = userCash;
+              _userRole = role;
+            });
+            widget.onLoginStatusChanged?.call(true);
+            widget.onLoginSuccess?.call(data);
+            debugPrint(
+              '✅ [CTV] Đăng nhập thành công. Role: $role, Cash: $userCash (không kiểm tra cash cho ctv)',
+            );
           } else {
-            console.error('❌ FlutterChannel not found!');
+            setState(() {
+              _isLoggedIn = false;
+              _userCash = 0;
+              _userRole = '';
+            });
+            widget.onLoginStatusChanged?.call(false);
+            debugPrint('⚠️ Role không hợp lệ: $role');
           }
-        };
-        
-        // Thông báo rằng Flutter đã sẵn sàng
-        console.log('🚀 Flutter Channel is ready!');
-        console.log('📱 Use: sendToFlutter("your message") to send data to Flutter app');
-       
-      ''');
+        } else {
+          setState(() {
+            _isLoggedIn = false;
+          });
+          widget.onLoginStatusChanged?.call(false);
+          debugPrint('⚠️ Không có user info trong login_success message');
+        }
+      } else if (type == 'login_failed') {
+        setState(() {
+          _isLoggedIn = false;
+          _userCash = 0;
+          _userRole = '';
+        });
+        widget.onLoginStatusChanged?.call(false);
 
-      debugPrint("✅ Đã inject JavaScript vào WebView");
+        final reason = data['reason'] ?? 'unknown';
+        final message = data['message'] ?? 'Đăng nhập thất bại';
+        debugPrint('❌ Đăng nhập thất bại: $message (Lý do: $reason)');
+        if (reason == 'zero_cash') {
+          debugPrint('⚠️ Tài khoản không có xu, không cho phép đăng nhập');
+        }
+      } else if (type == 'login_status') {
+        final isLoggedIn = data['isLoggedIn'] ?? false;
+        if (_isLoggedIn != isLoggedIn) {
+          setState(() {
+            _isLoggedIn = isLoggedIn;
+          });
+          widget.onLoginStatusChanged?.call(isLoggedIn);
+        }
+      } else if (type == 'user_info') {
+        if (data['user'] != null) {
+          final role = data['role'] ?? '';
+          final userCash =
+              int.tryParse(data['user']['cash']?.toString() ?? '0') ?? 0;
+          if (role == 'admin' || role == 'ctv') {
+            setState(() {
+              _userCash = userCash;
+              _isLoggedIn = true;
+              _userRole = role;
+            });
+            widget.onLoginSuccess?.call(data);
+            debugPrint(
+              '💰 Cập nhật user info: Role=$role, Cash=$userCash (không kiểm tra cash)',
+            );
+          } else if (role == 'users' && userCash > 0) {
+            setState(() {
+              _userCash = userCash;
+              _isLoggedIn = true;
+              _userRole = role;
+            });
+            widget.onLoginSuccess?.call(data);
+            debugPrint('💰 Cập nhật user cash: $_userCash');
+          } else {
+            setState(() {
+              _isLoggedIn = false;
+              _userCash = 0;
+              _userRole = '';
+            });
+            widget.onLoginStatusChanged?.call(false);
+            debugPrint(
+              '⚠️ Cash = 0 hoặc role không hợp lệ, không cập nhật trạng thái đăng nhập',
+            );
+          }
+        }
+      }
     } catch (e) {
-      debugPrint("❌ Lỗi khi inject JavaScript: $e");
+      debugPrint('❌ Error parsing message: $e');
     }
   }
 
@@ -165,7 +325,6 @@ class _WebViewScreenState extends State<WebViewScreen>
         return;
       }
 
-      debugPrint("Đang fetch game MỚI cho vòng lặp 2 phút...");
       final Game? newGame = await GamesService.fetchRandomGame();
 
       if (newGame != null) {
@@ -194,14 +353,12 @@ class _WebViewScreenState extends State<WebViewScreen>
     _aliveTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       try {
         if (await FlutterOverlayWindow.isActive() == true) {
-          // Gửi "nhịp tim" qua kênh giao tiếp duy nhất
           await FlutterOverlayWindow.shareData({'type': 'heartbeat'});
           debugPrint("💓 App sent heartbeat");
         } else {
-          timer.cancel(); // Overlay đã bị đóng, dừng gửi
+          timer.cancel();
         }
       } catch (e) {
-        // Lỗi (ví dụ: overlay đã bị crash), dừng gửi
         debugPrint("❌ Lỗi khi gửi heartbeat, có thể overlay đã chết: $e");
         timer.cancel();
       }
@@ -258,7 +415,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       debugPrint("🔴 App detached - App đang bị kill");
       _stopAliveTimer();
 
-
       try {
         if (await FlutterOverlayWindow.isActive() == true) {
           await FlutterOverlayWindow.closeOverlay();
@@ -270,9 +426,41 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // Hiển thị overlay khi app vào nền
   Future<void> _showOverlayAndSendData() async {
-    // 1. CHỜ KHÓA
+    if (!_isLoggedIn) {
+      debugPrint(
+        "⚠️ Không hiển thị overlay: Chưa đăng nhập (isLoggedIn=false)",
+      );
+      return;
+    }
+    // Kiểm tra logic theo role
+    debugPrint(
+      "🔍 Kiểm tra điều kiện hiển thị overlay: Role=$_userRole, Cash=$_userCash",
+    );
+    if (_userRole == 'admin' || _userRole == 'ctv') {
+      debugPrint(
+        "✅ [$_userRole] Cho phép hiển thị overlay (không kiểm tra cash)",
+      );
+    } else if (_userRole == 'users') {
+      // Users: chỉ hiển thị overlay khi cash > 0
+      if (_userCash <= 0) {
+        debugPrint(
+          "⚠️ [USERS] Không hiển thị overlay: Cash = 0 hoặc âm (Cash=$_userCash)",
+        );
+        return;
+      } else {
+        debugPrint("✅ [USERS] Cho phép hiển thị overlay (Cash=$_userCash > 0)");
+      }
+    } else {
+      // Role không hợp lệ
+      debugPrint(
+        "❌ Không hiển thị overlay: Role không hợp lệ (Role=$_userRole)",
+      );
+      return;
+    }
+    // Nếu đến đây, có nghĩa là cho phép hiển thị overlay
+    debugPrint("🚀 Chuẩn bị mở overlay...");
+
     while (_isOverlayProcessing) {
       debugPrint("Lỗi Race: Đang chờ lệnh ĐÓNG hoàn thành...");
       await Future.delayed(const Duration(milliseconds: 100));
@@ -345,344 +533,5 @@ class _WebViewScreenState extends State<WebViewScreen>
       _isOverlayProcessing = false;
       debugPrint("Trả khóa sau khi MỞ");
     }
-  }
-}
-
-// ============================================
-// OVERLAY WIDGET - Hiển thị khi app ở nền
-// ============================================
-
-class OverlayWidget extends StatefulWidget {
-  const OverlayWidget({super.key});
-
-  @override
-  State<OverlayWidget> createState() => _OverlayWidgetState();
-}
-
-class _OverlayWidgetState extends State<OverlayWidget> {
-  String _gameName = "Đang tìm...";
-  String _gameImage = "";
-  String _gameTiLe = "0";
-
-  StreamSubscription? _subscription;
-  final Random _random = Random();
-
-  Timer? _watchdogTimer; // "Chó canh gác"
-  int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-  static const int _appDeadThresholdMillis = 3000; // Chờ 3 giây
-  bool _isAppAlive = true; // Trạng thái để ẨN/HIỆN
-
-  @override
-  void initState() {
-    super.initState();
-    debugPrint("🟢 OverlayWidget initState được gọi");
-
-    _subscription = FlutterOverlayWindow.overlayListener.listen((data) async {
-      if (!mounted) return;
-
-      _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-
-      if (_watchdogTimer == null || !_watchdogTimer!.isActive) {
-        _startWatchdogTimer();
-        debugPrint("🔥 Watchdog đã được kích hoạt.");
-      }
-
-      // 3. Xử lý data
-      if (data is Map && data['type'] == 'heartbeat') {
-        debugPrint("💓 Overlay received heartbeat");
-
-        if (!_isAppAlive) {
-          setState(() {
-            _isAppAlive = true;
-          });
-        }
-
-        try {
-          await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
-          debugPrint("✅ Đã cập nhật cờ (flag) thành 'defaultFlag'");
-        } catch (e) {
-          debugPrint("❌ Lỗi khi cập nhật cờ (flag) về 'defaultFlag': $e");
-        }
-        return;
-      }
-
-      debugPrint("🟢 Nhận data: $data");
-      setState(() {
-        _gameName = data['name'] ?? 'Đang tìm...';
-        _gameImage = data['image'] ?? '';
-        _gameTiLe = data['ti_le'] ?? '0';
-        _isAppAlive = true;
-      });
-    });
-  }
-
-  void _startWatchdogTimer() {
-    _watchdogTimer?.cancel();
-    _watchdogTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final timeDiff = now - _lastHeartbeatTime;
-
-      debugPrint("🔍 Watchdog check: Time since last heartbeat: ${timeDiff}ms");
-
-      if (timeDiff > _appDeadThresholdMillis) {
-        // App đã chết
-        if (_isAppAlive) {
-          debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
-          try {
-            await FlutterOverlayWindow.updateFlag(OverlayFlag.clickThrough);
-            debugPrint("✅ Đã cập nhật cờ (flag) thành 'clickThrough'");
-          } catch (e) {
-            debugPrint("❌ Lỗi khi cập nhật cờ (flag): $e");
-          }
-          if (mounted) {
-            setState(() {
-              _isAppAlive = false;
-            });
-          }
-          try {
-            await FlutterOverlayWindow.closeOverlay();
-            debugPrint("🧹 Đã đóng overlay do app không còn heartbeat");
-          } catch (e) {
-            debugPrint("❌ Lỗi khi đóng overlay trong watchdog: $e");
-          }
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    _watchdogTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isAppAlive) {
-      // Khi app chết, trả về widget rỗng và trong suốt
-      return Container(color: Colors.transparent, width: 0, height: 0);
-    }
-
-    final now = DateTime.now();
-
-    final String currentTime =
-        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-    final int randomMinutes = _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
-    final futureTime = now.add(Duration(minutes: randomMinutes));
-    final String formattedFutureTime =
-        "${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}";
-
-    return Material(
-      color: Colors.transparent,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final double overlayWidth = constraints.maxWidth;
-          final double overlayHeight = constraints.maxHeight;
-          final double robotWidth = overlayWidth * 0.3;
-          final double mainFontSize = (overlayHeight * 0.1).clamp(10.0, 12.0);
-          final double gameImageSize = (overlayHeight * 0.3);
-          final double robotIconSize = robotWidth * 0.8;
-
-          return Container(
-            height: constraints.maxHeight,
-            width: constraints.maxWidth,
-            padding: EdgeInsets.all(10),
-            // Padding cố định
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade700, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  flex: 8,
-                  child: Row(
-                    children: [
-                      //Robot
-                      SizedBox(
-                        width: robotWidth,
-                        child: Image.asset(
-                          'assets/overlay_robot.gif',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.android,
-                              color: Colors.green,
-                              size: robotIconSize, // Cố định
-                            );
-                          },
-                        ),
-                      ),
-                      // Main content
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            // Ti le
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: overlayWidth * 0.03, // Tỉ lệ
-                                    vertical: overlayHeight * 0.03, // Tỉ lệ
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade800,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    '$_gameTiLe%',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: mainFontSize, // Cố định
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            _gameImage.isNotEmpty ?  Container(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.green,
-                                  width: 3,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.green.withOpacity(0.5),
-                                    blurRadius: 15,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: ClipOval(
-                                  child: Image.network(
-                                    _gameImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.error_outline,
-                                        color: Colors.green,
-                                        size: gameImageSize, // Cố định
-                                      );
-                                    },
-                                  )
-                              ),
-                            ) : Container(
-                              width: gameImageSize,
-                              height: gameImageSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: Icon(
-                                Icons.error_outline,
-                                color: Colors.green,
-                                size: gameImageSize, // Cố định
-                              )
-                            ),
-
-                            // Game name
-                            Flexible(
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8, // Cố định
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _gameName,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: mainFontSize, // Cố định
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        currentTime,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        formattedFutureTime,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    'Số vòng: ${getRandomRound()}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.yellow,
-                      fontSize: mainFontSize, // Cố định
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  int getRandomRound() {
-    return _random.nextInt(120 - 50 + 1) + 50;
   }
 }

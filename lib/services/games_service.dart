@@ -13,7 +13,6 @@ class GamesService {
     int maxRetries = 10,
   }) async {
     try {
-      // Bước 1: Lấy tổng số games từ api_get_all_games.php
       debugPrint("🎮 Bước 1: Đang lấy tổng số games...");
 
       final allGamesResponse = await http.get(Uri.parse(apiGetAllGamesUrl));
@@ -30,7 +29,6 @@ class GamesService {
         return null;
       }
 
-      // Lấy tổng số games từ statistics hoặc count
       int totalGames = 0;
 
       if (totalGames == 0) {
@@ -44,17 +42,14 @@ class GamesService {
 
       debugPrint("✅ Tổng số games: $totalGames");
 
-      // Bước 2: Random ID và thử lấy game
       final random = Random();
       int attempts = 0;
 
       while (attempts < maxRetries) {
-        // Random ID từ 1 đến totalGames
         final randomId = random.nextInt(totalGames) + 1;
 
         debugPrint("🎲 Bước 2: Random ID: $randomId (Lần thử: ${attempts + 1}/$maxRetries)");
 
-        // Bước 3: Gọi API lấy game theo ID (api_get_game.php)
         final gameResponse = await http.get(
             Uri.parse('$apiGetGameUrl?id=$randomId')
         );
@@ -65,7 +60,6 @@ class GamesService {
           if (gameJson['status'] == 'success' && gameJson['data'] != null) {
             debugPrint("✅ Tìm thấy game ID: $randomId");
 
-            // Parse thành Game object với các field: id, name, image, ti_le
             return Game.fromJson(gameJson['data']);
           } else {
             debugPrint("⚠️ Game ID $randomId không tồn tại, thử ID khác...");

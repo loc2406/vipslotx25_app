@@ -77,5 +77,5 @@ flutter:
 flutter_launcher_icons:
   android: true  # Bật cho Android
   ios: true      # Bật cho iOS
-  image_path: "assets/logo_cloudnest.png" # Đường dẫn đến file logo GỐC của bạn
+  image_path: "assets/logo_nohu.png" # Đường dẫn đến file logo GỐC của bạn
 
