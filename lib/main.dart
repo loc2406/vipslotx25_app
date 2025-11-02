@@ -43,20 +43,23 @@ class _MyAppState extends State<MyApp> {
       title: ' Tool Quét lá bài BCR V92',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: WebViewScreen(initialUrl: 'https://toolmm88.top',  onLoginStatusChanged: (isLoggedIn) {
-        setState(() {
-          _isLoggedIn = isLoggedIn;
-        });
-        // Tùy chỉnh giao diện dựa trên trạng thái đăng nhập
-        _customizeUI(isLoggedIn);
-      },
+      home: WebViewScreen(
+        initialUrl: 'https://toolhack999.net',
+        onLoginStatusChanged: (isLoggedIn) {
+          setState(() {
+            _isLoggedIn = isLoggedIn;
+          });
+          // Tùy chỉnh giao diện dựa trên trạng thái đăng nhập
+          _customizeUI(isLoggedIn);
+        },
         onLoginSuccess: (userInfo) {
           setState(() {
             _userInfo = userInfo;
           });
           // Thực hiện các hành động sau khi đăng nhập thành công
           _onLoginSuccess(userInfo);
-        },),
+        },
+      ),
     );
   }
 
@@ -100,6 +103,9 @@ class _WebViewScreenState extends State<WebViewScreen>
   bool _isLoggedIn = false;
   late final String initialUrl;
 
+  int _userCash = 0;
+  String _userRole = '';
+
   Timer? _gameRotationTimer;
   double _screenHeight = 400;
   double _screenWidth = 800;
@@ -133,7 +139,6 @@ class _WebViewScreenState extends State<WebViewScreen>
           onPageStarted: (String url) => setState(() => _isLoading = true),
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
-            // _injectJavaScript();
           },
           onWebResourceError: (WebResourceError error) {},
         ),
@@ -179,118 +184,211 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
-  // Future<void> _injectJavaScript() async {
-  //   try {
-  //     await _controller.runJavaScript('''
-  //       (function() {
-  //       // Kiểm tra nếu đã đăng nhập (có cookie hoặc session)
-  //       function checkLoginStatus() {
-  //         // Gửi trạng thái đăng nhập hiện tại
-  //         if (document.cookie.indexOf('user_token') !== -1) {
-  //           FlutterApp.postMessage(JSON.stringify({
-  //             type: 'login_status',
-  //             isLoggedIn: true
-  //           }));
-  //         }
-  //       }
-  //
-  //       // Override hàm Login() để bắt sự kiện đăng nhập thành công
-  //       if (typeof window.originalLogin === 'undefined') {
-  //         window.originalLogin = window.Login;
-  //         window.Login = function() {
-  //           if (window.originalLogin) {
-  //             window.originalLogin();
-  //           }
-  //           // Lắng nghe response từ AJAX
-  //           const originalAjax = \$.ajax;
-  //           \$.ajax = function(options) {
-  //             if (options.url && options.url.includes('login.php')) {
-  //               const originalSuccess = options.success;
-  //               options.success = function(res) {
-  //                 if (res.status == 'success') {
-  //                   // Gửi thông báo đăng nhập thành công đến Flutter
-  //                   FlutterApp.postMessage(JSON.stringify({
-  //                     type: 'login_success',
-  //                     message: res.message,
-  //                     timestamp: new Date().toISOString()
-  //                   }));
-  //
-  //                   // Gửi thông tin user nếu có
-  //                   setTimeout(function() {
-  //                     // Lấy thông tin user từ cookie hoặc localStorage nếu có
-  //                     FlutterApp.postMessage(JSON.stringify({
-  //                       type: 'user_info',
-  //                       userToken: document.cookie.match(/user_token=([^;]+)/) ?
-  //                                  document.cookie.match(/user_token=([^;]+)/)[1] : null
-  //                     }));
-  //                   }, 1000);
-  //                 }
-  //                 if (originalSuccess) {
-  //                   originalSuccess.apply(this, arguments);
-  //                 }
-  //               };
-  //             }
-  //             return originalAjax.apply(this, arguments);
-  //           };
-  //         }
-  //       }
-  //
-  //       // Lắng nghe thay đổi URL (khi redirect sau khi login)
-  //       let lastUrl = window.location.href;
-  //       setInterval(function() {
-  //         if (window.location.href !== lastUrl) {
-  //           lastUrl = window.location.href;
-  //           // Kiểm tra nếu không còn ở trang login
-  //           if (window.location.href.indexOf('login') === -1) {
-  //             checkLoginStatus();
-  //           }
-  //         }
-  //       }, 500);
-  //
-  //       // Kiểm tra trạng thái đăng nhập khi trang load
-  //       setTimeout(checkLoginStatus, 1000);
-  //
-  //       // Lắng nghe khi có thay đổi cookie (thông qua polling)
-  //       let lastCookie = document.cookie;
-  //       setInterval(function() {
-  //         if (document.cookie !== lastCookie) {
-  //           lastCookie = document.cookie;
-  //           checkLoginStatus();
-  //         }
-  //       }, 1000);
-  //     })();
-  //     ''');
-  //
-  //     debugPrint("✅ Đã inject JavaScript vào WebView");
-  //   } catch (e) {
-  //     debugPrint("❌ Lỗi khi inject JavaScript: $e");
-  //   }
-  // }
-
   void _handleMessage(String message) {
     try {
       final data = json.decode(message);
+
       final type = data['type'];
 
+      debugPrint('📨 Nhận message: type=$type, data=$data');
+
       if (type == 'login_success') {
+        // Xử lý khi có user info cho tất cả roles
+
+        if (data['user'] != null) {
+          final role = data['role'] ?? '';
+
+          final userCash =
+              int.tryParse(data['user']['cash']?.toString() ?? '0') ?? 0;
+
+          // Kiểm tra logic đăng nhập theo role
+
+          if (role == 'admin') {
+            // Admin: luôn coi là đăng nhập thành công và hiển thị overlay
+
+            setState(() {
+              _isLoggedIn = true;
+
+              _userCash = userCash;
+
+              _userRole = role;
+            });
+
+            widget.onLoginStatusChanged?.call(true);
+
+            widget.onLoginSuccess?.call(data);
+
+            debugPrint(
+              '✅ [ADMIN] Đăng nhập thành công. Role: $role, Cash: $userCash (không kiểm tra cash cho admin)',
+            );
+          } else if (role == 'users') {
+            // Users: chỉ coi là đăng nhập thành công khi cash > 0
+
+            if (userCash > 0) {
+              setState(() {
+                _isLoggedIn = true;
+
+                _userCash = userCash;
+
+                _userRole = role;
+              });
+
+              widget.onLoginStatusChanged?.call(true);
+
+              widget.onLoginSuccess?.call(data);
+
+              debugPrint(
+                '✅ [USERS] Đăng nhập thành công. Role: $role, Cash: $userCash (> 0)',
+              );
+            } else {
+              // Users với cash <= 0: không coi là đăng nhập thành công
+
+              setState(() {
+                _isLoggedIn = false;
+
+                _userCash = 0;
+
+                _userRole = '';
+              });
+
+              widget.onLoginStatusChanged?.call(false);
+
+              debugPrint(
+                '⚠️ [USERS] Cash = 0 hoặc âm, không coi là đăng nhập thành công. Cash: $userCash',
+              );
+            }
+          } else if (role == 'ctv') {
+            // CTV: luôn coi là đăng nhập thành công và hiển thị overlay (giống admin)
+
+            setState(() {
+              _isLoggedIn = true;
+
+              _userCash = userCash;
+
+              _userRole = role;
+            });
+
+            widget.onLoginStatusChanged?.call(true);
+
+            widget.onLoginSuccess?.call(data);
+
+            debugPrint(
+              '✅ [CTV] Đăng nhập thành công. Role: $role, Cash: $userCash (không kiểm tra cash cho ctv)',
+            );
+          } else {
+            // Role không hợp lệ
+
+            setState(() {
+              _isLoggedIn = false;
+
+              _userCash = 0;
+
+              _userRole = '';
+            });
+
+            widget.onLoginStatusChanged?.call(false);
+
+            debugPrint('⚠️ Role không hợp lệ: $role');
+          }
+        } else {
+          // Không có user info, không coi là đăng nhập thành công
+
+          setState(() {
+            _isLoggedIn = false;
+          });
+
+          widget.onLoginStatusChanged?.call(false);
+
+          debugPrint('⚠️ Không có user info trong login_success message');
+        }
+      } else if (type == 'login_failed') {
+        // Xử lý trường hợp đăng nhập thất bại
+
         setState(() {
-          _isLoggedIn = true;
+          _isLoggedIn = false;
+
+          _userCash = 0;
+
+          _userRole = '';
         });
-        widget.onLoginStatusChanged?.call(true);
-        widget.onLoginSuccess?.call(data);
+
+        widget.onLoginStatusChanged?.call(false);
+
+        final reason = data['reason'] ?? 'unknown';
+
+        final message = data['message'] ?? 'Đăng nhập thất bại';
+
+        debugPrint('❌ Đăng nhập thất bại: $message (Lý do: $reason)');
+
+        if (reason == 'zero_cash') {
+          debugPrint('⚠️ Tài khoản không có xu, không cho phép đăng nhập');
+        }
       } else if (type == 'login_status') {
         final isLoggedIn = data['isLoggedIn'] ?? false;
+
         if (_isLoggedIn != isLoggedIn) {
           setState(() {
             _isLoggedIn = isLoggedIn;
           });
+
           widget.onLoginStatusChanged?.call(isLoggedIn);
         }
       } else if (type == 'user_info') {
-        widget.onLoginSuccess?.call(data);
+        // Chỉ xử lý khi có user info hợp lệ
+
+        if (data['user'] != null) {
+          final role = data['role'] ?? '';
+
+          final userCash =
+              int.tryParse(data['user']['cash']?.toString() ?? '0') ?? 0;
+
+          // Cập nhật logic tương tự như login_success
+
+          if (role == 'admin' || role == 'ctv') {
+            setState(() {
+              _userCash = userCash;
+
+              _isLoggedIn = true;
+
+              _userRole = role;
+            });
+
+            widget.onLoginSuccess?.call(data);
+
+            debugPrint(
+              '💰 Cập nhật user info: Role=$role, Cash=$userCash (không kiểm tra cash)',
+            );
+          } else if (role == 'users' && userCash > 0) {
+            setState(() {
+              _userCash = userCash;
+
+              _isLoggedIn = true;
+
+              _userRole = role;
+            });
+
+            widget.onLoginSuccess?.call(data);
+
+            debugPrint('💰 Cập nhật user cash: $_userCash');
+          } else {
+            setState(() {
+              _isLoggedIn = false;
+
+              _userCash = 0;
+
+              _userRole = '';
+            });
+
+            widget.onLoginStatusChanged?.call(false);
+
+            debugPrint(
+              '⚠️ Cash = 0 hoặc role không hợp lệ, không cập nhật trạng thái đăng nhập',
+            );
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Error parsing message: $e');
+      debugPrint('❌ Error parsing message: $e');
     }
   }
 
@@ -400,12 +498,45 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   Future<void> _showOverlayAndSendData() async {
+    if (!_isLoggedIn) {
+      debugPrint(
+        "⚠️ Không hiển thị overlay: Chưa đăng nhập (isLoggedIn=false)",
+      );
+      return;
+    }
+    // Kiểm tra logic theo role
+    debugPrint(
+      "🔍 Kiểm tra điều kiện hiển thị overlay: Role=$_userRole, Cash=$_userCash",
+    );
+    if (_userRole == 'admin' || _userRole == 'ctv') {
+      debugPrint(
+        "✅ [$_userRole] Cho phép hiển thị overlay (không kiểm tra cash)",
+      );
+    } else if (_userRole == 'users') {
+      // Users: chỉ hiển thị overlay khi cash > 0
+      if (_userCash <= 0) {
+        debugPrint(
+          "⚠️ [USERS] Không hiển thị overlay: Cash = 0 hoặc âm (Cash=$_userCash)",
+        );
+        return;
+      } else {
+        debugPrint("✅ [USERS] Cho phép hiển thị overlay (Cash=$_userCash > 0)");
+      }
+    } else {
+      // Role không hợp lệ
+      debugPrint(
+        "❌ Không hiển thị overlay: Role không hợp lệ (Role=$_userRole)",
+      );
+      return;
+    }
+    // Nếu đến đây, có nghĩa là cho phép hiển thị overlay
+    debugPrint("🚀 Chuẩn bị mở overlay...");
     while (_isOverlayProcessing) {
-      debugPrint("Lỗi Race: Đang chờ lệnh ĐÓNG hoàn thành...");
+      debugPrint("⏸️ Race: Đang chờ lệnh ĐÓNG hoàn thành...");
       await Future.delayed(const Duration(milliseconds: 100));
     }
     _isOverlayProcessing = true;
-    debugPrint("Lấy khóa để MỞ overlay");
+    debugPrint("🔒 Lấy khóa để MỞ overlay");
 
     try {
       final hasPermission = await FlutterOverlayWindow.isPermissionGranted();
@@ -415,16 +546,13 @@ class _WebViewScreenState extends State<WebViewScreen>
         return;
       }
       debugPrint("✅ Đã có quyền overlay");
-
       final isActive = await FlutterOverlayWindow.isActive();
-
       if (isActive != true) {
         debugPrint("🚀 Đang mở overlay...");
         final double logicalHeight = _screenHeight * 0.18;
         final double logicalWidth = _screenWidth * 0.60;
         final int physicalHeight = (logicalHeight * _pixelRatio).toInt();
         final int physicalWidth = (logicalWidth * _pixelRatio).toInt();
-
         await FlutterOverlayWindow.showOverlay(
           height: physicalHeight,
           width: physicalWidth,
@@ -440,9 +568,7 @@ class _WebViewScreenState extends State<WebViewScreen>
 
       await FlutterOverlayWindow.shareData({'type': 'trigger_update'});
       debugPrint("✅ Gửi 'trigger_update' KHỞI ĐỘNG lên overlay");
-
       _startAliveTimer();
-
       _gameRotationTimer?.cancel();
       _gameRotationTimer = Timer(
         const Duration(seconds: 120),
@@ -454,7 +580,7 @@ class _WebViewScreenState extends State<WebViewScreen>
       debugPrint("❌ Lỗi khi hiển thị overlay: $e");
     } finally {
       _isOverlayProcessing = false;
-      debugPrint("Trả khóa sau khi MỞ");
+      debugPrint("🔓 Trả khóa sau khi MỞ");
     }
   }
 }
