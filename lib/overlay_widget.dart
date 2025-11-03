@@ -13,31 +13,16 @@ class OverlayWidget extends StatefulWidget {
 
 class _OverlayWidgetState extends State<OverlayWidget> {
   StreamSubscription? _subscription;
-  final Random _random = Random();
-  List<String> tableNames = [
-    "Bàn 1",
-    "Bàn 2",
-    "Bàn 3",
-    "Bàn 4",
-    "Bàn 5",
-    "Bàn 6",
-    "Bàn 7",
-    "Bàn 8",
-    "Bàn 9",
-    "Bàn 10",
-    "Bàn C01",
-    "Bàn C02",
-    "Bàn C03",
-    "Bàn C08",
-    "Bàn C09",
-    "Bàn C10",
-  ];
-  List<String> predicts = ["B", "P"];
 
   Timer? _watchdogTimer;
   int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
   static const int _appDeadThresholdMillis = 3000;
   bool _isAppAlive = true;
+  String? _roomTableName;
+  String? _roomPredict;
+  String? _roomWinrate;
+  bool _hasRoomInfo = false;
+  bool _isOnRoomPage = false;
 
   @override
   void initState() {
@@ -69,7 +54,27 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         }
         return;
       }
+
       debugPrint("🟢 Nhận data: $data");
+
+      if (data is Map && data['type'] == 'room_info_update') {
+        final roomInfo = data['roomInfo'] as Map<String, dynamic>?;
+        final isOnRoomPage = data['isOnRoomPage'] as bool? ?? false;
+        setState(() {
+          _isOnRoomPage = isOnRoomPage;
+          if (roomInfo != null) {
+            _roomTableName = roomInfo['tableName']?.toString();
+            _roomPredict = roomInfo['predict']?.toString();
+            _roomWinrate = roomInfo['winrate']?.toString();
+            _hasRoomInfo = true;
+          }
+        });
+        debugPrint(
+          '📊 Overlay nhận room_info_update: isOnRoomPage=$isOnRoomPage, Bàn=$_roomTableName, Dự đoán=$_roomPredict, Tỉ lệ=$_roomWinrate',
+        );
+        return;
+      }
+
       setState(() {
         _isAppAlive = true;
       });
@@ -116,15 +121,86 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     super.dispose();
   }
 
+  String getTableName() {
+    if (_hasRoomInfo && _roomTableName != null && _roomTableName!.isNotEmpty) {
+      return 'Bàn: $_roomTableName';
+    }
+    return 'Không lấy được tên bàn!';
+  }
+
+  String getPredict() {
+    if (_hasRoomInfo && _roomPredict != null && _roomPredict!.isNotEmpty) {
+      return _roomPredict!;
+    }
+    return 'Không lấy được dự đoán!';
+  }
+
+  String getWinrate() {
+    if (_hasRoomInfo && _roomWinrate != null && _roomWinrate!.isNotEmpty) {
+      return _roomWinrate!;
+    }
+    return 'Không lấy được tỉ lệ!';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isAppAlive) {
       return Container(color: Colors.transparent, width: 0, height: 0);
     }
 
-    final String randomTable = getRandomTable();
-    final String randomPredict = getRandomPredict();
-    final String randomPercent = getRandomPercent();
+    if (!_isOnRoomPage && !_hasRoomInfo) {
+      return Material(
+        color: Colors.transparent,
+
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double overlayWidth = constraints.maxWidth;
+            final double overlayHeight = constraints.maxHeight;
+            final double mainFontSize = (overlayHeight * 0.12).clamp(
+              14.0,
+              18.0,
+            );
+            return Container(
+              height: overlayHeight,
+              width: overlayWidth,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade700, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Bạn chưa chọn bàn!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: mainFontSize,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    final String tableName = getTableName();
+    final String predict = getPredict();
+    final String winrate = getWinrate();
+
+    debugPrint('===Table name: $tableName, predict: $predict, wỉnate: $winrate');
 
     return Material(
       color: Colors.transparent,
@@ -161,7 +237,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                     children: [
                       // Bang
                       Text(
-                        randomTable,
+                        tableName,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: mainFontSize, // Cố định
@@ -209,12 +285,11 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               child: Image.asset(
                                 width: gameImageSize - 10,
                                 height: gameImageSize - 10,
-                                randomPredict == 'B'
+                                predict == 'B'
                                     ? 'assets/symbol_b.png'
                                     : 'assets/symbol_p.png',
                                 fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) {
+                                errorBuilder: (context, error, stackTrace) {
                                   return Image.asset(
                                     'assets/symbol_b.png',
                                     fit: BoxFit.cover,
@@ -231,9 +306,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                       Container(
                         width: gameImageSize,
                         height: gameImageSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
+                        decoration: BoxDecoration(shape: BoxShape.circle),
                         child: Stack(
                           children: [
                             Image.asset(
@@ -244,7 +317,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                             ),
                             Center(
                               child: Text(
-                                randomPercent,
+                                winrate,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
@@ -267,20 +340,5 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         },
       ),
     );
-  }
-
-  String getRandomTable() {
-    final randomIndex = _random.nextInt(tableNames.length);
-    return tableNames[randomIndex];
-  }
-
-  String getRandomPredict() {
-    final randomIndex = _random.nextInt(predicts.length);
-    return predicts[randomIndex];
-  }
-
-  String getRandomPercent() {
-    final percent = _random.nextInt(99) + 1;
-    return '$percent%';
   }
 }

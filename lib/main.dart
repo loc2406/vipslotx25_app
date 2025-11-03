@@ -49,8 +49,6 @@ class _MyAppState extends State<MyApp> {
           setState(() {
             _isLoggedIn = isLoggedIn;
           });
-          // Tùy chỉnh giao diện dựa trên trạng thái đăng nhập
-          _customizeUI(isLoggedIn);
         },
         onLoginSuccess: (userInfo) {
           setState(() {
@@ -61,14 +59,6 @@ class _MyAppState extends State<MyApp> {
         },
       ),
     );
-  }
-
-  void _customizeUI(bool isLoggedIn) {
-    if (isLoggedIn) {
-      debugPrint('User đã đăng nhập - Tùy chỉnh UI');
-    } else {
-      debugPrint('User chưa đăng nhập');
-    }
   }
 
   void _onLoginSuccess(Map<String, dynamic>? userInfo) {
@@ -106,13 +96,15 @@ class _WebViewScreenState extends State<WebViewScreen>
   int _userCash = 0;
   String _userRole = '';
 
-  Timer? _gameRotationTimer;
   double _screenHeight = 400;
   double _screenWidth = 800;
   double _pixelRatio = 1.0;
 
   bool _isOverlayProcessing = false;
   Timer? _aliveTimer;
+
+  Map<String, dynamic>? _roomInfo;
+  bool _isOnRoomPage = false;
 
   @override
   void initState() {
@@ -200,8 +192,6 @@ class _WebViewScreenState extends State<WebViewScreen>
 
           final userCash =
               int.tryParse(data['user']['cash']?.toString() ?? '0') ?? 0;
-
-          // Kiểm tra logic đăng nhập theo role
 
           if (role == 'admin') {
             // Admin: luôn coi là đăng nhập thành công và hiển thị overlay
@@ -386,37 +376,76 @@ class _WebViewScreenState extends State<WebViewScreen>
             );
           }
         }
+      } else if (type == 'room_info') {
+        // Xử lý thông tin room từ web
+
+        setState(() {
+          _roomInfo = {
+            'tableName': data['tableName'] ?? '',
+
+            'predict': data['predict'] ?? '',
+
+            'winrate': data['winrate'] ?? '0%',
+
+            'timestamp': data['timestamp'] ?? '',
+          };
+        });
+
+        debugPrint(
+          '📊 Nhận thông tin room: Bàn=${data['tableName']}, Dự đoán=${data['predict']}, Tỉ lệ=${data['winrate']}',
+        );
+
+        // Gửi thông tin room đến overlay nếu overlay đang hoạt động
+
+        _sendRoomInfoToOverlay();
+      } else if (type == 'page_status') {
+        final isOnRoomPage = data['isOnRoomPage'] ?? false;
+        setState(() {
+          _isOnRoomPage = isOnRoomPage;
+        });
+        debugPrint(
+          '📄 Trạng thái trang: ${isOnRoomPage ? "Đang ở trang room" : "Không ở trang room"}',
+        );
+        _sendPageStatusToOverlay();
       }
     } catch (e) {
       debugPrint('❌ Error parsing message: $e');
     }
   }
 
-  Future<void> _updateOverlayWithRandomGame() async {
+  Future<void> _sendRoomInfoToOverlay() async {
+    try {
+      if (_roomInfo != null) {
+        final isActive = await FlutterOverlayWindow.isActive();
+        if (isActive == true) {
+          await FlutterOverlayWindow.shareData({
+            'type': 'room_info_update',
+            'roomInfo': _roomInfo,
+            'isOnRoomPage': _isOnRoomPage,
+          });
+          debugPrint('✅ Đã gửi room_info_update đến overlay');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Lỗi khi gửi room_info đến overlay: $e');
+    }
+  }
+
+  Future<void> _sendPageStatusToOverlay() async {
     try {
       final isActive = await FlutterOverlayWindow.isActive();
-      if (isActive != true) {
-        _gameRotationTimer?.cancel();
-        debugPrint("🔄 Overlay không hoạt động, dừng vòng lặp update.");
-        return;
+      if (isActive == true) {
+        await FlutterOverlayWindow.shareData({
+          'type': 'page_status_update',
+          'isOnRoomPage': _isOnRoomPage,
+          'roomInfo': _roomInfo,
+        });
+        debugPrint(
+          '✅ Đã gửi page_status_update đến overlay: isOnRoomPage=$_isOnRoomPage',
+        );
       }
-
-      await FlutterOverlayWindow.shareData({'type': 'trigger_update'});
-      debugPrint("✅ Gửi 'trigger_update' lên overlay (lần cập nhật 2 phút)");
-
-      // Hẹn giờ lần chạy KẾ TIẾP (sau 2 phút)
-      _gameRotationTimer?.cancel();
-      _gameRotationTimer = Timer(
-        const Duration(seconds: 120),
-        _updateOverlayWithRandomGame,
-      );
     } catch (e) {
-      debugPrint("❌ Lỗi khi gửi trigger_update: $e");
-      _gameRotationTimer?.cancel();
-      _gameRotationTimer = Timer(
-        const Duration(seconds: 120),
-        _updateOverlayWithRandomGame,
-      );
+      debugPrint('❌ Lỗi khi gửi page_status đến overlay: $e');
     }
   }
 
@@ -464,7 +493,6 @@ class _WebViewScreenState extends State<WebViewScreen>
 
   @override
   void dispose() {
-    _gameRotationTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _stopAliveTimer();
     super.dispose();
@@ -481,7 +509,6 @@ class _WebViewScreenState extends State<WebViewScreen>
     } else if (state == AppLifecycleState.resumed) {
       debugPrint("🟢 App resumed - Đóng overlay");
       _stopAliveTimer();
-      _gameRotationTimer?.cancel();
       await _closeOverlayIfOpen();
     } else if (state == AppLifecycleState.detached) {
       debugPrint("🔴 App detached - App đang bị kill");
@@ -510,10 +537,10 @@ class _WebViewScreenState extends State<WebViewScreen>
     );
     if (_userRole == 'admin' || _userRole == 'ctv') {
       debugPrint(
-        "✅ [$_userRole] Cho phép hiển thị overlay (không kiểm tra cash)",
+        "✅ [$_userRole] Không phép hiển thị overlay (không kiểm tra cash)",
       );
+      return;
     } else if (_userRole == 'users') {
-      // Users: chỉ hiển thị overlay khi cash > 0
       if (_userCash <= 0) {
         debugPrint(
           "⚠️ [USERS] Không hiển thị overlay: Cash = 0 hoặc âm (Cash=$_userCash)",
@@ -566,15 +593,13 @@ class _WebViewScreenState extends State<WebViewScreen>
         debugPrint("🔄 Overlay đã hiển thị. Bỏ qua bước tạo.");
       }
 
+      await _sendRoomInfoToOverlay();
+      await _sendPageStatusToOverlay();
+
       await FlutterOverlayWindow.shareData({'type': 'trigger_update'});
       debugPrint("✅ Gửi 'trigger_update' KHỞI ĐỘNG lên overlay");
       _startAliveTimer();
-      _gameRotationTimer?.cancel();
-      _gameRotationTimer = Timer(
-        const Duration(seconds: 120),
-        _updateOverlayWithRandomGame,
-      );
-      debugPrint("▶️ Đã khởi động timer 2 phút");
+      debugPrint("✅ Đã gửi thông tin room và trạng thái trang đến overlay");
       _startAliveTimer();
     } catch (e) {
       debugPrint("❌ Lỗi khi hiển thị overlay: $e");
