@@ -12,17 +12,22 @@ class OverlayWidget extends StatefulWidget {
 }
 
 class _OverlayWidgetState extends State<OverlayWidget> {
-  String _gameName = "Đang tìm...";
-  String _gameImage = "";
-  String _gameTiLe = "0";
-
   StreamSubscription? _subscription;
-  final Random _random = Random();
 
-  Timer? _watchdogTimer; // "Chó canh gác"
+  Timer? _watchdogTimer;
+  Timer? _timeUpdateTimer;
   int _lastHeartbeatTime = DateTime.now().millisecondsSinceEpoch;
-  static const int _appDeadThresholdMillis = 3000; // Chờ 3 giây
-  bool _isAppAlive = true; // Trạng thái để ẨN/HIỆN
+  static const int _appDeadThresholdMillis = 3000;
+  bool _isAppAlive = true;
+
+  // Biến lưu thông tin game
+  String _gameName = '';
+  String _gameImage = '';
+  String _gameTiLe = '0';
+  String _gameCountdown = '';
+  String _startTime = '';
+  String _endTime = '';
+  String _vong = '';
 
   @override
   void initState() {
@@ -39,16 +44,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         debugPrint("🔥 Watchdog đã được kích hoạt.");
       }
 
-      // 3. Xử lý data
       if (data is Map && data['type'] == 'heartbeat') {
         debugPrint("💓 Overlay received heartbeat");
-
         if (!_isAppAlive) {
           setState(() {
             _isAppAlive = true;
           });
         }
-
         try {
           await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
           debugPrint("✅ Đã cập nhật cờ (flag) thành 'defaultFlag'");
@@ -59,10 +61,38 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       }
 
       debugPrint("🟢 Nhận data: $data");
+
+      // Xử lý game_info_update từ app
+      if (data is Map && data['type'] == 'game_info_update') {
+        final gameInfo = data['gameInfo'] as Map<String, dynamic>?;
+        setState(() {
+          if (gameInfo != null) {
+            _gameName = gameInfo['gameName']?.toString() ?? '';
+            _gameImage = gameInfo['gameImageUrl']?.toString() ?? '';
+            // Lấy tỉ lệ từ winRate (có thể là "75%" hoặc "75")
+            final winRateStr = gameInfo['winRate']?.toString() ?? '0%';
+            _gameTiLe = winRateStr.replaceAll('%', '').trim();
+            _gameCountdown = gameInfo['countdown']?.toString() ?? '';
+            _startTime = gameInfo['startTime']?.toString() ?? '';
+            _endTime = gameInfo['endTime']?.toString() ?? '';
+            _vong = gameInfo['vong']?.toString() ?? '';
+          } else {
+            _gameName = '';
+            _gameImage = '';
+            _gameTiLe = '0';
+            _gameCountdown = '';
+            _startTime = '';
+            _endTime = '';
+            _vong = '';
+          }
+        });
+        debugPrint(
+          '🎮 Overlay nhận game_info_update: GameName=$_gameName, Tỉ lệ=$_gameTiLe%, StartTime=$_startTime, EndTime=$_endTime, Vòng=$_vong, ImageUrl=$_gameImage',
+        );
+        return;
+      }
+
       setState(() {
-        _gameName = data['name'] ?? 'Đang tìm...';
-        _gameImage = data['image'] ?? '';
-        _gameTiLe = data['ti_le'] ?? '0';
         _isAppAlive = true;
       });
     });
@@ -77,7 +107,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
       debugPrint("🔍 Watchdog check: Time since last heartbeat: ${timeDiff}ms");
 
       if (timeDiff > _appDeadThresholdMillis) {
-        // App đã chết
         if (_isAppAlive) {
           debugPrint("💀 App đã chết (không nhận được heartbeat) - ẨN overlay");
           try {
@@ -102,6 +131,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     });
   }
 
+
   @override
   void dispose() {
     _subscription?.cancel();
@@ -109,22 +139,12 @@ class _OverlayWidgetState extends State<OverlayWidget> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     if (!_isAppAlive) {
-      // Khi app chết, trả về widget rỗng và trong suốt
       return Container(color: Colors.transparent, width: 0, height: 0);
     }
-
-    final now = DateTime.now();
-
-    final String currentTime =
-        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-    final int randomMinutes = _random.nextInt(6) + 5; // (0 đến 5) + 5 = 5 đến 10
-    final futureTime = now.add(Duration(minutes: randomMinutes));
-    final String formattedFutureTime =
-        "${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}";
 
     return Material(
       color: Colors.transparent,
@@ -141,7 +161,6 @@ class _OverlayWidgetState extends State<OverlayWidget> {
             height: constraints.maxHeight,
             width: constraints.maxWidth,
             padding: EdgeInsets.all(10),
-            // Padding cố định
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.85),
               borderRadius: BorderRadius.circular(16),
@@ -171,7 +190,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                             return Icon(
                               Icons.android,
                               color: Colors.green,
-                              size: robotIconSize, // Cố định
+                              size: robotIconSize,
                             );
                           },
                         ),
@@ -187,8 +206,8 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               children: [
                                 Container(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: overlayWidth * 0.03, // Tỉ lệ
-                                    vertical: overlayHeight * 0.03, // Tỉ lệ
+                                    horizontal: overlayWidth * 0.03,
+                                    vertical: overlayHeight * 0.03,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade800,
@@ -198,15 +217,15 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                                     '$_gameTiLe%',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: mainFontSize, // Cố định
+                                      fontSize: mainFontSize,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-
-                            _gameImage.isNotEmpty ?  Container(
+                            _gameImage.isNotEmpty
+                                ? Container(
                               width: gameImageSize,
                               height: gameImageSize,
                               decoration: BoxDecoration(
@@ -225,38 +244,37 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                               ),
                               alignment: Alignment.center,
                               child: ClipOval(
-                                  child: Image.network(
-                                    _gameImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.error_outline,
-                                        color: Colors.green,
-                                        size: gameImageSize, // Cố định
-                                      );
-                                    },
-                                  )
-                              ),
-                            ) : Container(
-                                width: gameImageSize,
-                                height: gameImageSize,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
+                                child: Image.network(
+                                  _gameImage,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.error_outline,
+                                      color: Colors.green,
+                                      size: gameImageSize,
+                                    );
+                                  },
                                 ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  Icons.error_outline,
-                                  color: Colors.green,
-                                  size: gameImageSize, // Cố định
-                                )
+                              ),
+                            )
+                                : Container(
+                              width: gameImageSize,
+                              height: gameImageSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.error_outline,
+                                color: Colors.green,
+                                size: gameImageSize,
+                              ),
                             ),
-
                             // Game name
                             Flexible(
                               child: Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: 8, // Cố định
+                                  horizontal: 8,
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
@@ -270,7 +288,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: mainFontSize, // Cố định
+                                    fontSize: mainFontSize,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -288,24 +306,24 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       Text(
-                        currentTime,
+                        _startTime.isNotEmpty ? _startTime : '--:--',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
+                          fontSize: mainFontSize,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       Text(
-                        formattedFutureTime,
+                        _endTime.isNotEmpty ? _endTime : '--:--',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: mainFontSize, // Cố định
+                          fontSize: mainFontSize,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -315,13 +333,13 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                 Expanded(
                   flex: 1,
                   child: Text(
-                    'Số vòng: ${getRandomRound()}',
+                    _vong.isNotEmpty ? 'Số vòng: $_vong' : 'Số vòng: --',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.yellow,
-                      fontSize: mainFontSize, // Cố định
+                      fontSize: mainFontSize,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -332,9 +350,5 @@ class _OverlayWidgetState extends State<OverlayWidget> {
         },
       ),
     );
-  }
-
-  int getRandomRound() {
-    return _random.nextInt(120 - 50 + 1) + 50;
   }
 }
